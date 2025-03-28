@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import matplotlib.pyplot as plt
-from L96_model import iterate_onelayer, iterate_twolayer
+from L96_model import iterate_onelayer, iterate_twolayer, iterate_onelayer_param
 
 @pytest.fixture
 def model_params():
@@ -63,7 +63,7 @@ def test_stationary_distributions_twolayer(model_params, plot=False):
     T = 50
     spinup = 2
     # Test Two Layer Model
-    X, Y, time, U = iterate_twolayer(X_0, Y_0, dt, T, 
+    X, Y, U, time = iterate_twolayer(X_0, Y_0, dt, T, 
     model_params['F'], 
     model_params['c'], 
     model_params['b'], 
@@ -144,7 +144,7 @@ def test_zero_param_equals_onelayer(model_params):
     dt = 0.001
     T = 10
     X, time = iterate_onelayer(X_0, dt, T, model_params['F'])
-    X_param, time_param = iterate_onelayer_param(X_0, dt, T, lambda x: 0)
+    X_param, U, time_param = iterate_onelayer_param(X_0, dt, T, lambda x: 0)
     assert np.allclose(X, X_param, atol=1e-4), "Zero parameterization does not equal one layer model!"
     
 

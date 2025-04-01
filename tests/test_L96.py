@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import matplotlib.pyplot as plt
 from L96_model import iterate_onelayer, iterate_twolayer, iterate_onelayer_param
-
+from L96_model import L96OneLayer, L96TwoLayer, L96OneLayerParam
 @pytest.fixture
 def model_params():
     """Fixture for common model parameters"""
@@ -29,7 +29,8 @@ def test_stationary_distributions_onelayer(model_params, plot=False):
     T = 50
     spinup = 2
     # Test One Layer Model
-    X, time = iterate_onelayer(X_0, dt, T, model_params['F'])
+    model = L96OneLayer(X_0, dt=dt, F=model_params['F'])
+    X, time = model.iterate(T)
 
     # First test stability
     assert np.all(np.isfinite(X)), "One layer model unstable: X is not finite"
@@ -63,13 +64,13 @@ def test_stationary_distributions_twolayer(model_params, plot=False):
     T = 50
     spinup = 2
     # Test Two Layer Model
-    X, Y, U, time = iterate_twolayer(X_0, Y_0, dt, T, 
-    model_params['F'], 
-    model_params['c'], 
-    model_params['b'], 
-    model_params['h'], 
-    model_params['J'], 
-    model_params['K'])
+    model = L96TwoLayer(X_0, Y_0, 
+                        dt=dt,
+                        F=model_params['F'], 
+                        c=model_params['c'], 
+                        b=model_params['b'], 
+                        h=model_params['h'])
+    X, Y, U, time = model.iterate(T)
 
     # First test stability
     assert np.all(np.isfinite(X)), "Two layer model unstable: X is not finite"
@@ -120,7 +121,7 @@ def test_stationary_distributions_twolayer(model_params, plot=False):
         0.0001,
         0.001),
 ])
-def test_known_solution_onelayer(model_params, X_0, X_1, dt, T, plot=True):
+def test_known_solution_onelayer(model_params, X_0, X_1, dt, T, plot=False):
     """Test if the known solution is obtained for a given set of parameters. 
     Known solution generated from Euler integration with dt=0.0001, i.e. run for 10 time steps"""
 

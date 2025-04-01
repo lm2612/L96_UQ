@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import matplotlib.pyplot as plt
-from L96_model import L96OneLayer, L96TwoLayer, L96OneLayerParam
+from L96_model import L96OneLayer, L96TwoLayer, L96OneLayerParam, subgrid_component
 @pytest.fixture
 def model_params():
     """Fixture for common model parameters"""
@@ -208,3 +208,27 @@ def test_zero_param_equals_onelayer(model_params):
     X_param, U, time_param = model_param.iterate(T)
     assert np.allclose(X, X_param, atol=1e-4), "Zero parameterization does not equal one layer model!"
     
+def test_subgrid_component(model_params):
+    """Test if the subgrid component is close to the true subgrid component (U)"""
+    X_0 = np.random.rand(model_params['K'])
+    Y_0 = np.random.rand(model_params['K']*model_params['J'])
+    dt = 0.001
+    F = 20
+    T = 20
+    spinup = 2
+    # Run two layer model
+    model = L96TwoLayer(X_0, Y_0, 
+                        dt=dt,
+                        F=F, 
+                        c=model_params['c'], 
+                        b=model_params['b'], 
+                        h=model_params['h'])
+    X, Y, U_true, time = model.iterate(T)
+    # Discard spinup
+    X = X[int(spinup/dt):]
+    U_true = U_true[int(spinup/dt):]
+    # Estimate subgrid component
+    U_est = -subgrid_component(X[1:], X[:-1], dt, F)
+    print(((U_est - U_true[1:])).max())
+    # Only needs to be approximately close because we do not use Y to calculate U - use 10% tolerance
+    assert np.allclose(U_est, U_true[1:], atol=2), "Subgrid component is not close to the true subgrid component!"

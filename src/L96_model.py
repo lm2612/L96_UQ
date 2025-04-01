@@ -7,13 +7,13 @@ from numerical_methods import Euler_step, RK2_step, RK4_step, Euler_step_twolaye
 # First define generic functions for the one layer and two layer models
 def dX_dt_onelayer(X_t, F=20, U=0):
     """Returns dX/dt for one layer model with optional subgrid-scale forcing term U"""
-    dX_dt = -np.roll(X_t, 1) * (np.roll(X_t, 2) - np.roll(X_t, -1)) -X_t + F + U
+    dX_dt = -np.roll(X_t, 1, axis=-1) * (np.roll(X_t, 2, axis=-1) - np.roll(X_t, -1, axis=  -1)) -X_t + F + U
     return dX_dt
 
 def dY_dt(X_t, Y_t, F=20, c=10, b=10, h=1.0, J=32, K=8):
     """Returns dY/dt for two layer model"""
     X_int = np.repeat(X_t, J)
-    dY_dt = -c*b*np.roll(Y_t, -1) * (np.roll(Y_t, -2) - np.roll(Y_t, 1)) -c*Y_t + (h*c/b) * X_int 
+    dY_dt = -c*b*np.roll(Y_t, -1, axis=-1) * (np.roll(Y_t, -2, axis=-1) - np.roll(Y_t, 1, axis=-1)) -c*Y_t + (h*c/b) * X_int 
     return dY_dt
 
 def dX_dt_twolayer(X_t, Y_t, F=20, c=10, b=10, h=1.0, J=32, K=8):
@@ -21,6 +21,10 @@ def dX_dt_twolayer(X_t, Y_t, F=20, c=10, b=10, h=1.0, J=32, K=8):
     U = - (h*c/b)*Y_t.reshape((K, J)).sum(axis=-1)
     dX_dt = dX_dt_onelayer(X_t, F) + U
     return dX_dt, U
+
+def subgrid_component(X_curr, X_prev, dt, F):
+    """Returns the subgrid-scale component of the one layer model"""
+    return dX_dt_onelayer(X_prev, F)  - (X_curr - X_prev) / dt
 
 
 # Define classes for L96 models

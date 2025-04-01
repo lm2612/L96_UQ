@@ -19,6 +19,7 @@ def model_params():
 def check_slope(time, data, tol=0.1, varname=''):
     """Check if the data is stationary over time"""
     m, c = np.polyfit(time, data, 1)
+    print(f"{varname} slope: {m}")
     assert np.abs(m) < tol, f"{varname} not stationary, slope={m}"
 
 

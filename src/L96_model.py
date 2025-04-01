@@ -253,6 +253,7 @@ class L96OneLayerParam(L96OneLayer):
         nt = int(T/self.dt)
         X = np.zeros((nt, self.K))
         U = np.zeros((nt, self.K))
+        time = np.zeros(nt)
 
         X[0] = self.X
         time[0] = self.time

@@ -19,7 +19,6 @@ def model_params():
 def check_slope(time, data, tol=0.1, varname=''):
     """Check if the data is stationary over time"""
     m, c = np.polyfit(time, data, 1)
-    print(f"{varname} slope: {m}")
     assert np.abs(m) < tol, f"{varname} not stationary, slope={m}"
 
 
@@ -126,8 +125,11 @@ def test_known_solution_onelayer(model_params, X_0, X_1, dt, T, plot=False):
     """Test if the known solution is obtained for a given set of parameters. 
     Known solution generated from Euler integration with dt=0.0001, i.e. run for 10 time steps"""
 
-    X, time = iterate_onelayer(X_0, dt, T, model_params['F'])
-    
+    model = L96OneLayer(X_0, 
+                        dt=dt,
+                        F=model_params['F'])
+    X, time = model.iterate(T)  
+
     if plot:
         plt.plot(X_0, label='X_0')
         plt.plot(X_1, label='X true')
@@ -139,14 +141,21 @@ def test_known_solution_onelayer(model_params, X_0, X_1, dt, T, plot=False):
     
     # Compare last value of X to known solution, X_1
     assert np.allclose(X[-1], X_1, atol=1e-4), "One layer model solution not close to known solution!"
+   
 
 def test_zero_param_equals_onelayer(model_params):
     """Test if the zero parameterization equals the one layer model"""
     X_0 = np.random.rand(model_params['K'])
     dt = 0.001
     T = 10
-    X, time = iterate_onelayer(X_0, dt, T, model_params['F'])
-    X_param, U, time_param = iterate_onelayer_param(X_0, dt, T, lambda x: 0)
+    model = L96OneLayer(X_0, 
+                        dt=dt,
+                        F=model_params['F'])
+    X, time = model.iterate(T)
+    model_param = L96OneLayerParam(X_0, lambda x: 0, 
+                                   dt=dt,
+                                   F=model_params['F'])
+    X_param, U, time_param = model_param.iterate(T)
     assert np.allclose(X, X_param, atol=1e-4), "Zero parameterization does not equal one layer model!"
     
 

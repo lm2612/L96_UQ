@@ -22,61 +22,6 @@ def dX_dt_twolayer(X_t, Y_t, F=20, c=10, b=10, h=1.0, J=32, K=8):
     dX_dt = dX_dt_onelayer(X_t, F) + U
     return dX_dt, U
 
-# Now define functions for iterating the one layer and two layer models (To be deleted later)
-def iterate_onelayer(X_0, dt, T, F=20, K=8):
-    """
-    Iterates the one layer model
-    """
-    nt = int(T/dt)
-    X = np.zeros((nt, K))
-    time = np.zeros(nt)
-
-    X[0] = X_0
-    time[0] = 0
-    for t in range(1,nt):
-        X[t] = RK2_step(X[t-1], dX_dt_onelayer, dt, F=F)
-        time[t] = time[t-1] + dt
-    return X, time
-
-def iterate_twolayer(X_0, Y_0, dt, T, 
-        F=20, c=10, b=10, h=1.0, J=32, K=8):
-    """
-    Iterates the two layer model
-    """
-    nt = int(T/dt)
-    X = np.zeros((nt, K))
-    U = np.zeros((nt, K))
-    Y = np.zeros((nt, K*J))
-
-    time = np.zeros(nt)
-
-    Y[0] = Y_0
-    X[0] = X_0
-    time[0] = 0
-    for t in range(1,nt):
-        X[t], Y[t], U[t] = RK4_step_twolayer(X[t-1], Y[t-1], dX_dt_twolayer, dY_dt, dt,
-                                             F=F, c=c, b=b, h=h, J=J, K=K)
-        time[t] = time[t-1] + dt
-    return X, Y, U, time
-
-def iterate_onelayer_param(X_0, dt, T, param_func,
-        F=20, c=10, b=10, h=1.0, J=32, K=8):
-    """
-    Iterates the one layer model with a parameterization of the subgrid-scale forcing
-    """
-    nt = int(T/dt)
-    X = np.zeros((nt, K))
-    U = np.zeros((nt, K))
-
-    time = np.zeros(nt)
-
-    X[0] = X_0
-    time[0] = 0
-    for t in range(1,nt):
-        U[t] = param_func(X[t-1])
-        X[t] = RK2_step(X[t-1], dX_dt_onelayer, dt, F=F, U=U[t])
-        time[t] = time[t-1] + dt
-    return X, U, time
 
 # Define classes for L96 models
 class L96Base:

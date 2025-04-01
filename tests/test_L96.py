@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 import matplotlib.pyplot as plt
-from L96_model import iterate_onelayer, iterate_twolayer, iterate_onelayer_param
 from L96_model import L96OneLayer, L96TwoLayer, L96OneLayerParam
 @pytest.fixture
 def model_params():
@@ -108,6 +107,13 @@ def test_stationary_distributions_twolayer(model_params, plot=False):
 
 # Run with some different values for X_0, X_1, dt, T
 @pytest.mark.parametrize("X_0, X_1, dt, T", [
+    # Test 1: K=4, True solution from M2Lines RK2
+    (np.array([ 0.70120951, -3.95498642,  3.75292588,  8.49408818]),
+    np.array([-2.49205159, -0.91396802,  2.81247061, 10.0322123 ]),
+    0.001,
+    0.1,
+ ),
+    # Test 2: K=8, True solution from M2Lines RK2
     (np.array([-6.45609487, 10.93808542,  4.67189148,  6.36765283,  4.52882792,
         -6.27244321,  4.02496443, 14.06263477]),
         np.array([10.45760188, 11.19159657,  7.99144926, -0.57251116,  1.72765392,
@@ -115,21 +121,16 @@ def test_stationary_distributions_twolayer(model_params, plot=False):
         0.001,
         0.1
     ),
+    # Test 3: K=8, True solution from Euler integration (different integration method so diverges faster)
     (np.array([-7.54512685, -0.05364396, 14.61747508, 11.17113759,  0.28896955,
         7.09419   , 14.41910287, -2.79011643]),
     np.array([-7.48293987, -0.15385246, 14.62066656, 11.18383373,  0.23109528,
         7.106567  , 14.40414081, -2.95914369]),
         0.0001,
         0.001),
-    (np.array([ 0.70120951, -3.95498642,  3.75292588,  8.49408818]),
-    np.array([-2.49205159, -0.91396802,  2.81247061, 10.0322123 ]),
-    0.001,
-    0.1,
- )
 ])
 def test_known_solution_onelayer(model_params, X_0, X_1, dt, T, plot=False):
-    """Test if the known solution is obtained for a given set of parameters. 
-    Known solution generated from M2Lines RK2 integration"""
+    """Test if the known solution is obtained for a given set of parameters. """
     model = L96OneLayer(X_0, 
                         dt=dt,
                         F=model_params['F'])
@@ -149,6 +150,7 @@ def test_known_solution_onelayer(model_params, X_0, X_1, dt, T, plot=False):
     assert np.allclose(X[-1], X_1, atol=1e-3), "One layer model solution not close to known solution!"
 
 @pytest.mark.parametrize("X_0, Y_0, X_1, Y_1, dt, T", [
+    # Test 1: K=4, J=2, True solution from M2Lines RK4
     (np.array([ 0.70120951, -3.95498642,  3.75292588,  8.49408818]),
      np.array([ 0.42710408,  0.29823534,  0.04808923, -0.1973897 , -0.21931402,
         -0.16434865,  0.17949164, -0.41263649,  0.16388677,  0.11594328,
@@ -163,8 +165,7 @@ def test_known_solution_onelayer(model_params, X_0, X_1, dt, T, plot=False):
     0.1),
 ])
 def test_known_solution_twolayer(model_params, X_0, Y_0, X_1, Y_1, dt, T, plot=False):
-    """Test if the known solution is obtained for a given set of parameters. 
-    Known solution generated from M2Lines RK4,with dt=0.001, i.e. run for 10 time steps"""
+    """Test if the known solution is obtained for a given set of parameters. """
     K = X_0.shape[0]
     J = Y_0.shape[0] // K
     model = L96TwoLayer(X_0, Y_0, 
@@ -206,18 +207,4 @@ def test_zero_param_equals_onelayer(model_params):
                                    F=model_params['F'])
     X_param, U, time_param = model_param.iterate(T)
     assert np.allclose(X, X_param, atol=1e-4), "Zero parameterization does not equal one layer model!"
-    
-
-
-
-@pytest.mark.parametrize("dt", [0.1, 0.01, 0.001])
-def test_convergence(dt, model_params):
-    """Test convergence with different time steps"""
-    X_0 = np.random.rand(model_params['K'])
-    Y_0 = np.random.rand(model_params['K']*model_params['J'])
-    dt = 0.001
-    T = 10
-    spinup = 1
-    # Test One Layer Model
-    X, time = iterate_onelayer(X_0, dt, T, model_params['F'])
     

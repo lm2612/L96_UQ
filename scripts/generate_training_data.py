@@ -7,14 +7,9 @@ from L96_model import L96TwoLayer, subgrid_component
 
 np.random.seed(123)
 
-# Paths
-data_path = '../data/'
-plot_path = '../plots/'
-
-
 # Define dimensions of system (fixed)
-K = 8   #36
-J = 32  #10
+K = 8   
+J = 32  
 
 # Define the "true" parameters
 h = 1
@@ -28,7 +23,7 @@ T = 1000
 seed = 123
 np.random.seed(seed)
 
-data_path = f'../data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
+data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
 if not os.path.exists(data_path):
     os.makedirs(data_path)
 

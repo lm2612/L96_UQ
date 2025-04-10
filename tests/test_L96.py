@@ -228,7 +228,7 @@ def test_subgrid_component(model_params):
     X = X[int(spinup/dt):]
     U_true = U_true[int(spinup/dt):]
     # Estimate subgrid component
-    U_est = -subgrid_component(X[1:], X[:-1], dt, F)
+    U_est = subgrid_component(X[1:], X[:-1], dt, F)
     print(((U_est - U_true[1:])).max())
     # Only needs to be approximately close because we do not use Y to calculate U - use 10% tolerance
     assert np.allclose(U_est, U_true[1:], atol=2), "Subgrid component is not close to the true subgrid component!"

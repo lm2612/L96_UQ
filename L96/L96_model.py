@@ -24,7 +24,7 @@ def dX_dt_twolayer(X_t, Y_t, F=20, c=10, b=10, h=1.0, J=32, K=8):
 
 def subgrid_component(X_curr, X_prev, dt, F):
     """Returns the subgrid-scale component of the one layer model"""
-    return dX_dt_onelayer(X_prev, F)  - (X_curr - X_prev) / dt
+    return (X_curr - X_prev) / dt - dX_dt_onelayer(X_prev, F)  
 
 
 # Define classes for L96 models

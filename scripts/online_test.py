@@ -49,7 +49,7 @@ N_init = X_init_conds.shape[0]
 def param_func(X):
     nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
     with torch.no_grad():
-        out = - ml_model(nn_input)
+        out = ml_model(nn_input)
     return  out.squeeze().numpy()
 
 # Run each model for 10MTU

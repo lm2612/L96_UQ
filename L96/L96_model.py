@@ -2,7 +2,7 @@
 ## Author: Laura Mansfield 
 ## Date: March 2025
 import numpy as np
-from numerical_methods import Euler_step, RK2_step, RK4_step, Euler_step_twolayer, RK4_step_twolayer
+from L96.numerical_methods import Euler_step, RK2_step, RK4_step, Euler_step_twolayer, RK4_step_twolayer
 
 # First define generic functions for the one layer and two layer models
 def dX_dt_onelayer(X_t, F=20, U=0):

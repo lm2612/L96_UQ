@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 
-from L96_model import L96TwoLayer, subgrid_component
+from L96.L96_model import L96TwoLayer, subgrid_component
 
 np.random.seed(123)
 

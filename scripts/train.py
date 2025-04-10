@@ -24,8 +24,8 @@ seed = 123
 np.random.seed(seed)
 
 N_train = 100
-model_name = f"NN_2layer_N{N_train}"      # Choose LinearRegression or NN 
-model = NN(1, 1, [32, 32])
+model_name =  f"LinearRegression_N{N_train}"      # Choose LinearRegression or NN 
+model = LinearRegression(1, 1) #, [32, 32])
 total_params = sum(p.numel() for p in model.parameters())
 
 print("TOTAL PARAMS: ", total_params)
@@ -55,12 +55,15 @@ features = np.ravel(X[:N_train])
 targets = np.ravel(U[:N_train])   
 
 features_val = np.ravel(X[N_train:N_train+N_val])   
-targets_val = np.ravel(B[N_train:N_train+N_val])    
+targets_val = np.ravel(U[N_train:N_train+N_val])    
 
 print(features.shape, targets.shape, features_val.shape, targets_val.shape)
 
 X_torch = torch.tensor(features, dtype=torch.float32).reshape((-1, 1))
 Y_torch = torch.tensor(targets, dtype=torch.float32).reshape((-1, 1))
+
+X_val = torch.tensor(features_val, dtype=torch.float32).reshape((-1, 1))
+Y_val = torch.tensor(targets_val, dtype=torch.float32).reshape((-1, 1))
 
 # Optimisation settings
 optimiser = torch.optim.Adam(params = model.parameters(), lr=1e-2)
@@ -93,13 +96,28 @@ for iteration in range(num_iterations):
         # Save checkpoint
         # Save results
         output_dicts = {
-            "model":model}
+            "iteration": iteration,
+            "val_loss": losses_val[-1],
+            "train_loss": losses[-1],
+            "model": model}
 
-        torch.save(output_dicts, f"{save_model_path}/model_minval.pt")
-        print("Model saved to ",save_model_path)
+        torch.save(output_dicts, f"{save_model_path}/model_best.pt")
         min_loss = loss
 
 print("Done training")
+
+# Save results
+output_dicts = {
+    "iteration": iteration,
+    "val_loss": losses_val[-1],
+    "train_loss": losses[-1],
+    "np_rng_state": np.random.get_state(),
+    "torch_rng_state": torch.random.get_rng_state(),
+    "model":model}
+
+torch.save(output_dicts, f"{save_model_path}/model.pt")
+print("Model saved to ", save_model_path)
+
 
 # Plot and save losses
 plt.clf()
@@ -114,12 +132,12 @@ plt.savefig(f"{save_model_path}/losses.png")
 model.eval()
 plt.clf()
 figure, ax = plt.subplots(1)
-X_domain = torch.linspace(-8, 16., 100).unsqueeze(-1)
+X_domain = torch.linspace(-15, 20., 100).unsqueeze(-1)
 pred = model(X_domain).detach()
 
 # Plot
 plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
-plt.axis(ymin=-16., ymax=16.,xmin=-8., xmax=16.)
+plt.axis(ymin=-15., ymax=20.,xmin=-15., xmax=20.)
 plt.xticks(fontsize=18)
 plt.yticks(fontsize=18)
 plt.xlabel("$X$", fontsize=18)
@@ -130,9 +148,3 @@ plt.plot(X_domain.squeeze(), pred.squeeze(), color="r", linewidth=2)
 plt.savefig(f"{save_model_path}/input_outputs_NN.png")
 print("Plots done")
 
-# Save results
-output_dicts = {
-    "model":model}
-
-torch.save(output_dicts, f"{save_model_path}/model.pt")
-print("Model saved to ", save_model_path)

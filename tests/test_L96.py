@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import matplotlib.pyplot as plt
-from L96_model import L96OneLayer, L96TwoLayer, L96OneLayerParam, subgrid_component
+from L96.L96_model import L96OneLayer, L96TwoLayer, L96OneLayerParam, subgrid_component
 @pytest.fixture
 def model_params():
     """Fixture for common model parameters"""

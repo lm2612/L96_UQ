@@ -52,10 +52,12 @@ np.save(f'{data_path}/U_true_full.npy', U_true)
 np.save(f'{data_path}/X_init.npy', X[-1])
 np.save(f'{data_path}/Y_init.npy', Y[-1])
 
-## Save data at dt_f = 0.05 for training
+## Save data at dt_f = 0.005 for training
 subsample_factor = 5
+dt_f = dt * subsample_factor
+print(f"Subsampling data by factor {subsample_factor} to dt_f = {dt_f}")
 X = X[::subsample_factor]
-U_est = subgrid_component(X[1:], X[:-1], dt, F)
+U_est = subgrid_component(X[1:], X[:-1], dt_f, F)
 np.save(f'{data_path}/U_train_dtf.npy', U_est)
 
 X = X[1:]

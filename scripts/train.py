@@ -24,8 +24,8 @@ seed = 123
 np.random.seed(seed)
 
 N_train = 100
-model_name =  f"LinearRegression_N{N_train}"      # Choose LinearRegression or NN 
-model = LinearRegression(1, 1) #, [32, 32])
+model_name =  f"NN_2layer_N{N_train}"      # Choose LinearRegression or NN 
+model = NN(1, 1, [32, 32])
 total_params = sum(p.numel() for p in model.parameters())
 
 print("TOTAL PARAMS: ", total_params)
@@ -94,7 +94,6 @@ for iteration in range(num_iterations):
 
     if loss < min_loss:
         # Save checkpoint
-        # Save results
         output_dicts = {
             "iteration": iteration,
             "val_loss": losses_val[-1],

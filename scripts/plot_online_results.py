@@ -29,19 +29,20 @@ np.random.seed(seed)
 colors = {"Truth": "black",
           "OneLayer":"gray",
           "LinearRegression_N100":"red",
-           "NN_2layer_N100":"orange",
+          "NN_2layer_N100":"orange",
+          "BayesianNN_2layer_N100":"pink",
           }
 
 # models to plot
 N_train = 100
-model_names =  [f"LinearRegression_N{N_train}", f"NN_2layer_N{N_train}"]      # Choose LinearRegression or NN 
+model_names =  [f"LinearRegression_N{N_train}", f"NN_2layer_N{N_train}", "OneLayer"]      # Choose LinearRegression or NN 
 
 
 # Set up directory
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
 save_model_paths = [f'{data_path}/{model_name}/' for model_name in model_names]
 truth_path = f'{data_path}/truth/'
-plot_path = f'./plots/'
+plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
 if not os.path.exists(plot_path):
     os.makedirs(plot_path)
 
@@ -62,9 +63,15 @@ max_time = 1000
 fig, axs = plt.subplots(2, 4, figsize=(20, 10), sharex=True)
 axs = axs.flatten()
 for j in range(len(axs)):
-    axs[j].plot(time[:max_time], X_truth[:max_time, j], label="Truth", alpha=0.5)
+    axs[j].plot(time[:max_time], X_truth[:max_time, j], 
+        label="Truth", 
+        alpha=1.,
+        color=colors["Truth"])
     for X_ml, model_name in zip(X_mls, model_names):
-        axs[j].plot(time[:max_time], X_ml[:max_time, j], label=model_name, alpha=0.5)
+        axs[j].plot(time[:max_time], X_ml[0, :max_time, j], 
+        label=model_name, 
+        alpha=0.5,
+        color=colors[model_name])
     axs[j].legend(loc="upper left")
     axs[j].set_ylabel(f"X_{j}")
     axs[j].set_xlabel("Time")

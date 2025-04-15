@@ -14,7 +14,7 @@ class BayesianLinearRegression(PyroModule):
         self.linear.bias = PyroSample(dist.Normal(0., 10.).expand([n_targets]).to_event(1))
 
     def forward(self, x, y=None):
-        sigma = pyro.sample("sigma", dist.Uniform(0., 10.))
+        sigma = pyro.sample("sigma", dist.Uniform(1.0e-6, 10.))
         mean = self.linear(x) 
         with pyro.plate("data", x.shape[0]):
             obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1), obs=y)
@@ -45,7 +45,7 @@ class BayesianNN(PyroModule):
 
 
     def forward(self, x, y=None):
-        sigma = pyro.sample("sigma", dist.Uniform(0., 10.))
+        sigma = pyro.sample("sigma", dist.Uniform(1.0e-6, 10.))
 
         mean = self.linear_1(x)
         mean = self.activation_function(mean)

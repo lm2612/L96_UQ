@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import torch
 
 import pyro
-import pyro
 import pyro.distributions as dist
 from pyro.nn import PyroModule, PyroSample
 from pyro.infer.autoguide import AutoDiagonalNormal #TODO: AutoMultivariateNormal
@@ -33,10 +32,10 @@ seed = 123
 np.random.seed(seed)
 
 N_train = 100
-model_name =  f"BayesianNN_2layer_N{N_train}"      # Choose LinearRegression or NN 
+model_name =  f"BayesianLinearRegression_N{N_train}"      # Choose LinearRegression or NN 
 
 # Define model and guide
-model = BayesianNN(1, 1, [32, 32])
+model = BayesianLinearRegression(1, 1) #, [32, 32])
 total_params = sum(p.numel() for p in model.parameters())
 
 print("TOTAL PARAMS: ", total_params)
@@ -173,7 +172,6 @@ plt.xlabel("Parameterisation input")
 plt.ylabel("Parameterisation output")
 plt.title("2-layer NN")
 
-plt.plot(X_domain.squeeze(), pred.squeeze(), color="r", linewidth=2)
 plt.savefig(f"{save_model_path}/input_outputs_NN.png")
 print("Plots done")
 

@@ -144,6 +144,10 @@ plt.ylabel("$U$", fontsize=18)
 plt.tight_layout()
 plt.savefig(f"{save_model_path}/data.png")
 plt.plot(X_domain.squeeze(), pred.squeeze(), color="r", linewidth=2)
+
+plt.xlabel("Parameterisation input")
+plt.ylabel("Parameterisation output")
+plt.title("2-layer NN")
 plt.savefig(f"{save_model_path}/input_outputs_NN.png")
 print("Plots done")
 

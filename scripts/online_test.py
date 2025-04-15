@@ -29,8 +29,9 @@ seed = 123
 np.random.seed(seed)
 
 N_train = 100
-model_name = f"NN_2layer_N{N_train}"      # Choose LinearRegression or NN  or OneLayer
-model_name = f"LinearRegression_N{N_train}"
+#model_name = f"AleatoricNN_2layer_N{N_train}"      # Choose LinearRegression or NN  or OneLayer
+model_name = f"BayesianLinearRegression_N{N_train}"
+#model_name = f"NN_2layer_N{N_train}"
 runtype = "aleatoric"    # epistemic, aleatoric or None
 n_ens = 20               # number of times to run for (for deterministic this will be 1)
 # Set up directory
@@ -69,7 +70,23 @@ if "Bayesian" in model_name:
         return out.squeeze().numpy()
 
     save_model_path = f'{save_model_path}/{runtype}_'
-
+elif "Aleatoric" in model_name:
+    print(f"Stochastic run: {model_name}")
+    if runtype != "aleatoric":
+        warnings.warn(f"only runtype=aleatoric valid. You set runtype={runtype}. This will be ignored.")
+        runtype = "aleatoric"
+    output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+    ml_model = output_dicts["model"]
+    ml_model.eval()
+    # Initialize param_func
+    def param_func(X):
+        nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+        with torch.no_grad():
+            pred = ml_model(nn_input).detach()
+        # Split into mean and variance
+        mean, std = pred.chunk(2, dim=-1)
+        out = np.random.normal(loc=mean.squeeze().numpy(), scale=std.squeeze().numpy())
+        return  out
 else:
     print(f"Deterministic run: {model_name}")
     if runtype != "":
@@ -117,6 +134,7 @@ X_all = np.zeros((n_ens, N_init * nt, K))
 U_all = np.zeros((n_ens, N_init * nt, K))
 t=0
 for i in range(N_init):
+    print(f"Initial condition {i}")
     # Repeat for n_ens ensemble members (n_ens = 1 if deterministic)
     for n in range(n_ens):
         # Initialize model

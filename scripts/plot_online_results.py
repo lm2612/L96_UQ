@@ -29,7 +29,10 @@ np.random.seed(seed)
 
 # models to plot
 N_train = 100
-model_names =  [f"LinearRegression_N{N_train}", f"NN_2layer_N{N_train}", "OneLayer"]      # Choose LinearRegression or NN 
+model_names =  ["OneLayer", 
+ f"LinearRegression_N{N_train}",
+ f"NN_2layer_N{N_train}", 
+ f"DropoutNN_2layer_N{N_train}"]      # Choose LinearRegression or NN 
 
 
 # Set up directory

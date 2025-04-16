@@ -31,9 +31,10 @@ np.random.seed(seed)
 
 # models to plot
 N_train = 100
-model_names =  [ #f"BayesianNN_2layer_N{N_train}/aleatoric_", 
+model_names =  [ f"BayesianNN_2layer_N{N_train}/aleatoric_", 
 #f"BayesianNN_2layer_N{N_train}/epistemic_",
-f"AleatoricNN_2layer_N{N_train}/"
+#f"AleatoricNN_2layer_N{N_train}/"
+#f"DropoutNN_2layer_N{N_train}/"
 ]      # Choose LinearRegression or NN 
 
 # Set up directory
@@ -84,7 +85,7 @@ for i in range(N_init):
             for n in range(n_ens):
                 axs[j].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, j],
                 label=labels[model_name] if n==0 else None, 
-                alpha=0.1 if n_ens > 5 else 0.5,
+                alpha=0.3 if n_ens > 20 else 0.5,
                 color=colors[model_name])
         axs[j].axis(xmin=0, xmax=3)       
         axs[j].legend(loc="upper left")

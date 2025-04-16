@@ -3,6 +3,8 @@ colors = {"Truth": "black",
           # Deterministic models
          "LinearRegression_N100":"darkred",
          "NN_2layer_N100":"darkblue",
+         # Dropout
+         "DropoutNN_2layer_N100/":"blueviolet",
          # Maxlikelihood models
          "AleatoricLinearRegression_N100":"red",
          "AleatoricNN_2layer_N100/":"blue",  
@@ -15,6 +17,8 @@ colors = {"Truth": "black",
 
 labels = {"Truth":"Truth",
          "OneLayer":"OneLayer",
+         # Dropout
+         "DropoutNN_2layer_N100/":"NN drp",
          # Deterministic models
          "LinearRegression_N100":"LR",
          "NN_2layer_N100":"NN",

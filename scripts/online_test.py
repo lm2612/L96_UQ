@@ -30,10 +30,11 @@ np.random.seed(seed)
 
 N_train = 100
 #model_name = f"AleatoricNN_2layer_N{N_train}"      # Choose LinearRegression or NN  or OneLayer
-model_name = f"BayesianLinearRegression_N{N_train}"
-#model_name = f"NN_2layer_N{N_train}"
+#model_name = f"BayesianLinearRegression_N{N_train}"
+
+model_name = f"BayesianNN_2layer_N{N_train}"
 runtype = "aleatoric"    # epistemic, aleatoric or None
-n_ens = 20               # number of times to run for (for deterministic this will be 1)
+n_ens = 50               # number of times to run for (for deterministic this will be 1) (quite slow when running large ensembles eg 50)
 # Set up directory
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
 save_model_path = f'{data_path}/{model_name}/'
@@ -87,6 +88,22 @@ elif "Aleatoric" in model_name:
         mean, std = pred.chunk(2, dim=-1)
         out = np.random.normal(loc=mean.squeeze().numpy(), scale=std.squeeze().numpy())
         return  out
+elif "Dropout" in model_name:
+    if runtype != "epistemic":
+        warnings.warn(f"only runtype=epistemic valid. You set runtype={runtype}. This will be ignored.")
+        runtype = "epistemic"
+    print(f"Dropout run: {model_name}")
+    output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+    ml_model = output_dicts["model"]
+    # Use training mode rather than eval mode to add stochasticity!
+    ml_model.train()
+
+    # Initialize param_func
+    def param_func(X):
+        nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+        with torch.no_grad():
+            out = ml_model(nn_input)
+        return  out.squeeze().numpy()
 else:
     print(f"Deterministic run: {model_name}")
     if runtype != "":
@@ -153,3 +170,4 @@ for i in range(N_init):
 np.save(f"{save_model_path}X_dtf.npy", X_all)
 np.save(f"{save_model_path}U_dtf.npy", U_all)
 
+print(f"Done. Saved to {save_model_path}")

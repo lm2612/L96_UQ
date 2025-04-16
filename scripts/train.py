@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import torch
 
-from ml_models.TorchModels import LinearRegression, NN
+from ml_models.TorchModels import LinearRegression, NN, NNDropout
 
 # Get paths
 # Define dimensions of system (fixed)
@@ -24,8 +24,8 @@ seed = 123
 np.random.seed(seed)
 
 N_train = 100
-model_name =  f"NN_2layer_N{N_train}"      # Choose LinearRegression or NN 
-model = NN(1, 1, [32, 32])
+model_name =  f"DropoutNN_2layer_N{N_train}"      # Choose LinearRegression or NN 
+model = NNDropout(1, 1, [32, 32], dropout_rate=0.5)
 total_params = sum(p.numel() for p in model.parameters())
 
 print("TOTAL PARAMS: ", total_params)

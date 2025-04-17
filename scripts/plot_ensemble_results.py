@@ -31,8 +31,9 @@ np.random.seed(seed)
 
 # models to plot
 N_train = 100
-model_names =  [ f"BayesianNN_2layer_N{N_train}/aleatoric_", 
+model_names =  [ f"BayesianNN_2layer_N{N_train}/both_", 
 #f"BayesianNN_2layer_N{N_train}/epistemic_",
+#f"BayesianNN_2layer_N{N_train}/aleatoric_",
 #f"AleatoricNN_2layer_N{N_train}/"
 #f"DropoutNN_2layer_N{N_train}/"
 ]      # Choose LinearRegression or NN 
@@ -41,9 +42,12 @@ model_names =  [ f"BayesianNN_2layer_N{N_train}/aleatoric_",
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
 save_model_paths = [f'{data_path}/{model_name}' for model_name in model_names]
 truth_path = f'{data_path}/truth/'
-plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
-if not os.path.exists(plot_path):
-    os.makedirs(plot_path)
+if len(model_names) == 1:
+    plot_path = save_model_paths[0]
+else:
+    plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
+    if not os.path.exists(plot_path):
+        os.makedirs(plot_path)
 
 # Load truth data
 X_truth = np.load(f"{data_path}/truth/X_dtf.npy")
@@ -53,7 +57,7 @@ X_mls = [np.load(f"{save_model_path}X_dtf.npy") for save_model_path in save_mode
 
 
 T = np.ceil(X_truth.shape[0] * dt_f)
-print(T, X_truth.shape, X_mls[0].shape)
+print(T, X_truth.shape,[X_ml.shape for X_ml in X_mls])
 time = np.arange(0, T, dt_f)
 print(time.shape)
 
@@ -72,6 +76,7 @@ assert(N_init * nt == nt_total)
 
 for i in range(N_init):
     # Plot
+    plt.clf()
     fig, axs = plt.subplots(2, 4, figsize=(20, 8), sharex=True)
     axs = axs.flatten()
 
@@ -84,17 +89,24 @@ for i in range(N_init):
             n_ens = X_ml.shape[0]
             for n in range(n_ens):
                 axs[j].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, j],
-                label=labels[model_name] if n==0 else None, 
-                alpha=0.3 if n_ens > 20 else 0.5,
+                #label=labels[model_name] if n==0 else None, 
+                alpha=0.1 if n_ens > 20 else 0.5,
                 color=colors[model_name])
-        axs[j].axis(xmin=0, xmax=3)       
-        axs[j].legend(loc="upper left")
+            if n > 1:
+                axs[j].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, j].mean(axis=0),
+                    label=labels[model_name], 
+                    alpha=0.5,
+                    color=colors[model_name])
+        axs[j].axis(xmin=0, xmax=3)
+        if  len(model_names) > 1:  
+            axs[j].legend(loc="upper left")
         axs[j].set_ylabel(f"X_{j}")
         axs[j].set_xlabel("Time")
     plt.tight_layout()
-    plt.savefig(f"{plot_path}/X_ens_timeseries_{i}.png")
+    plt.savefig(f"{plot_path}X_ens_timeseries_{i}.png")
 
-    print(f"Saved to {plot_path}/X_ens_timeseries_{i}.png")
+    print(f"Saved to {plot_path}X_ens_timeseries_{i}.png")
+    plt.close()
 
 # Distributions
 fig = plt.figure(figsize=(10, 5))
@@ -108,5 +120,5 @@ for X_ml, model_name in zip(X_mls, model_names):
             label=model_name, 
             alpha=0.6)
 plt.legend()
-plt.savefig(f"{plot_path}/X_ens_pdf.png")
-print(f"Saved to {plot_path}/X_ens_pdf.png")
+plt.savefig(f"{plot_path}X_ens_pdf.png")
+print(f"Saved to {plot_path}X_ens_pdf.png")

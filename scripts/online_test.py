@@ -9,6 +9,8 @@ import pyro
 from pyro.infer import Predictive
 
 from ml_models.TorchModels import LinearRegression, NN
+from ml_models.BayesianModels import FixedParamNN
+
 from L96.L96_model import L96OneLayerParam
 
 # Get paths
@@ -29,12 +31,12 @@ seed = 123
 np.random.seed(seed)
 
 N_train = 100
-#model_name = f"AleatoricNN_2layer_N{N_train}"      # Choose LinearRegression or NN  or OneLayer
+model_name = f"AleatoricNN_2layer_N{N_train}"      # Choose LinearRegression or NN  or OneLayer
 #model_name = f"BayesianLinearRegression_N{N_train}"
-
-model_name = f"BayesianNN_2layer_N{N_train}"
-runtype = "aleatoric"    # epistemic, aleatoric or None
-n_ens = 50               # number of times to run for (for deterministic this will be 1) (quite slow when running large ensembles eg 50)
+#model_name = f"BayesianNN_2layer_N{N_train}"
+#model_name = f"BayesianLinearRegression_N{N_train}"
+runtype = "deterministic"    # epistemic, aleatoric or None
+n_ens = 1               # number of times to run for (for deterministic this will be 1) (quite slow when running large ensembles eg 50)
 # Set up directory
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
 save_model_path = f'{data_path}/{model_name}/'
@@ -43,28 +45,43 @@ if not os.path.exists(save_model_path):
 print(save_model_path)
 
 
-# Load ml param model
+# Load ml param model: This depends on the type of the model
 if "Bayesian" in model_name:
-    print(f"Running a stochastic parameterisation: {model_name} using {runtype} uncertainty, {n_ens} ensemble members")
-    # Stochastic parameterisation
-    if runtype == "epistemic":
-        return_site = "_RETURN" 
-    elif runtype == "aleatoric":
-        return_site = "obs"
-    elif runtype == "mean":
-        # Todo
-        return_site = "obs"
-    else:
-        raise ValueError(f"{runtype} unknown, must be epistemic, aleatoric or mean.")
-
+    print(f"Running Bayesian NN - a stochastic parameterisation: {model_name} using {runtype} uncertainty, {n_ens} ensemble members")
     output_dicts = torch.load(f"{save_model_path}/model_best.pt")
     pyro.get_param_store().load(f"{save_model_path}/pyro_params.pt")
 
     pyro_model = output_dicts["model"]
     guide = output_dicts["guide"]
-    predictive = Predictive(pyro_model, guide=guide, num_samples=1,
-                        return_sites=(return_site,))
-
+    # Stochastic parameterisation
+    if runtype == "epistemic":
+        return_site = "_RETURN" 
+        predictive = Predictive(pyro_model, guide=guide, num_samples=1,
+                    return_sites=(return_site,))
+    elif runtype == "both":
+        return_site = "obs"
+        predictive = Predictive(pyro_model, guide=guide, num_samples=1,
+                    return_sites=(return_site,))
+    elif runtype == "aleatoric":
+        return_site = "obs"
+        fixed_param_NN = FixedParamNN(pyro_model, guide)
+        fixed_param_NN.eval()
+        predictive = Predictive(fixed_param_NN, guide=guide, num_samples=1,
+                    return_sites=(return_site,))
+    elif runtype == "deterministic":
+        if n_ens != 1:
+            warnings.warn(f"runtype not valid for deterministic run ({model_name}). You set n_ens={n_ens}. This will be ignored and only one member run.")
+            n_ens = 1
+        return_site = "_RETURN"
+        fixed_param_NN = FixedParamNN(pyro_model, guide)
+        fixed_param_NN.eval()
+        predictive = Predictive(fixed_param_NN, guide=guide, num_samples=1,
+                    return_sites=(return_site,))
+    elif runtype == "mean":
+        # Todo
+        return_site = "obs"
+    else:
+        raise ValueError(f"{runtype} unknown, must be epistemic, aleatoric or mean.")
     def param_func(x):
         nn_input = torch.tensor(x, dtype=torch.float32).unsqueeze(-1)
         out = predictive(nn_input)[return_site]
@@ -73,21 +90,34 @@ if "Bayesian" in model_name:
     save_model_path = f'{save_model_path}/{runtype}_'
 elif "Aleatoric" in model_name:
     print(f"Stochastic run: {model_name}")
-    if runtype != "aleatoric":
-        warnings.warn(f"only runtype=aleatoric valid. You set runtype={runtype}. This will be ignored.")
-        runtype = "aleatoric"
+    if runtype == "epistemic":
+        raise ValueError(f"Must be run either in aleatoric or determinstic mode.")
+    
     output_dicts = torch.load(f"{save_model_path}/model_best.pt")
     ml_model = output_dicts["model"]
     ml_model.eval()
-    # Initialize param_func
-    def param_func(X):
-        nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
-        with torch.no_grad():
-            pred = ml_model(nn_input).detach()
-        # Split into mean and variance
-        mean, std = pred.chunk(2, dim=-1)
-        out = np.random.normal(loc=mean.squeeze().numpy(), scale=std.squeeze().numpy())
-        return  out
+
+    if runtype == "deterministic":
+        # Initialize param_func
+        def param_func(X):
+            nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+            with torch.no_grad():
+                pred = ml_model(nn_input).detach()
+            # Split into mean and variance
+            mean, std = pred.chunk(2, dim=-1)
+            return mean.squeeze().numpy()
+        save_model_path = f'{save_model_path}/{runtype}_'
+
+    else:
+        # Initialize param_func
+        def param_func(X):
+            nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+            with torch.no_grad():
+                pred = ml_model(nn_input).detach()
+            # Split into mean and variance
+            mean, std = pred.chunk(2, dim=-1)
+            out = np.random.normal(loc=mean.squeeze().numpy(), scale=std.squeeze().numpy())
+            return  out
 elif "Dropout" in model_name:
     if runtype != "epistemic":
         warnings.warn(f"only runtype=epistemic valid. You set runtype={runtype}. This will be ignored.")

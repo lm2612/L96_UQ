@@ -2,23 +2,24 @@
 ## Author: Laura Mansfield 
 ## Date: March 2025
 import numpy as np
+import torch
 from L96.numerical_methods import Euler_step, RK2_step, RK4_step, Euler_step_twolayer, RK4_step_twolayer
 
 # First define generic functions for the one layer and two layer models
 def dX_dt_onelayer(X_t, F=20, U=0):
     """Returns dX/dt for one layer model with optional subgrid-scale forcing term U"""
-    dX_dt = -np.roll(X_t, 1, axis=-1) * (np.roll(X_t, 2, axis=-1) - np.roll(X_t, -1, axis=  -1)) -X_t + F + U
+    dX_dt = -torch.roll(X_t, 1, dims=-1) * (torch.roll(X_t, 2, dims=-1) - torch.roll(X_t, -1, dims=  -1)) - X_t + F + U
     return dX_dt
 
 def dY_dt(X_t, Y_t, F=20, c=10, b=10, h=1.0, J=32, K=8):
     """Returns dY/dt for two layer model"""
-    X_int = np.repeat(X_t, J)
-    dY_dt = -c*b*np.roll(Y_t, -1, axis=-1) * (np.roll(Y_t, -2, axis=-1) - np.roll(Y_t, 1, axis=-1)) -c*Y_t + (h*c/b) * X_int 
+    X_int = torch.repeat_interleave(X_t, J)
+    dY_dt = -c*b*torch.roll(Y_t, -1, dims=-1) * (torch.roll(Y_t, -2, dims=-1) - torch.roll(Y_t, 1, dims=-1)) -c*Y_t + (h*c/b) * X_int 
     return dY_dt
 
 def dX_dt_twolayer(X_t, Y_t, F=20, c=10, b=10, h=1.0, J=32, K=8):
     """Returns dX/dt for two layer model"""
-    U = - (h*c/b)*Y_t.reshape((K, J)).sum(axis=-1)
+    U = - (h*c/b)*Y_t.reshape((K, J)).sum(dim=-1)
     dX_dt = dX_dt_onelayer(X_t, F) + U
     return dX_dt, U
 
@@ -30,7 +31,7 @@ def subgrid_component(X_curr, X_prev, dt, F):
 # Define classes for L96 models
 class L96Base:
     """Base class for Lorenz '96 models"""
-    def __init__(self, dt=0.001):
+    def __init__(self, dt=0.001, device='cpu'):
         """
         Initialize base L96 model
         
@@ -40,11 +41,12 @@ class L96Base:
         self.dt = dt
         self.time = 0.0
         self.X = None
+        self.device = device
     
-    def _validate_initial_conditions(self, X_0):
-        """Validate initial conditions"""
-        if not isinstance(X_0, np.ndarray):
-            X_0 = np.array(X_0)
+    def _torch(self, X_0):
+        """Convert input to torch tensor if needed"""
+        if not isinstance(X_0, torch.Tensor):
+            X_0 = torch.tensor(X_0, dtype=torch.float32, device=self.device)
         return X_0
     
     def get_solution(self):
@@ -62,7 +64,7 @@ class L96Base:
 
 class L96OneLayer(L96Base):
     """Single layer Lorenz '96 model"""
-    def __init__(self, X_0, dt=0.001, F=20):
+    def __init__(self, X_0, dt=0.001, F=20, device='cpu'):
         """
         Initialize one-layer model
         
@@ -71,17 +73,17 @@ class L96OneLayer(L96Base):
             dt (float): time step for integration
             F (float): Forcing parameter
         """
-        super().__init__(dt=dt)
-        self.X = self._validate_initial_conditions(X_0)
+        super().__init__(dt=dt, device=device)
+        self.X = self._torch(X_0)
         self.K = len(X_0)
-        self.F = F
+        self.F = self._torch(F)
         self._initialize_history()
     
     def iterate(self, T):
         """Iterate model forward in time"""
         nt = int(T/self.dt)
-        X = np.zeros((nt, self.K))
-        time = np.zeros(nt)
+        X = torch.zeros((nt, self.K))
+        time = torch.zeros(nt)
 
         X[0] = self.X
         time[0] = self.time
@@ -97,15 +99,15 @@ class L96OneLayer(L96Base):
             self.X_history = X
             self.time_history = time
         else:
-            self.X_history = np.concatenate((self.X_history, X), axis=0)
-            self.time_history = np.concatenate((self.time_history, time), axis=0)
+            self.X_history = torch.concat((self.X_history, X), axis=0)
+            self.time_history = torch.concat((self.time_history, time), axis=0)
         
         return X, time
 
 
 class L96TwoLayer(L96Base):
     """Two-layer Lorenz '96 model"""
-    def __init__(self, X_0, Y_0, dt=0.001, F=20, c=10, b=10, h=1.0):
+    def __init__(self, X_0, Y_0, dt=0.001, F=20, c=10, b=10, h=1.0, device='cpu'):
         """
         Initialize two-layer model
         
@@ -118,18 +120,18 @@ class L96TwoLayer(L96Base):
             b (float): Scale parameter
             h (float): Coupling coefficient
         """
-        super().__init__(dt=dt)
-        self.X = self._validate_initial_conditions(X_0)
-        self.Y = self._validate_initial_conditions(Y_0)
+        super().__init__(dt=dt, device=device)
+        self.X = self._torch(X_0)
+        self.Y = self._torch(Y_0)
         self.K = len(X_0)
         if len(Y_0) % self.K != 0:
             raise ValueError(f"Number of Y variables must be a multiple of K, \
              but K = {self.K} and len(Y_0) = {len(Y_0)}")
         self.J = len(Y_0) // self.K
-        self.F = F
-        self.c = c
-        self.b = b
-        self.h = h
+        self.F = self._torch(F)
+        self.c = self._torch(c)
+        self.b = self._torch(b)
+        self.h = self._torch(h)
         self._initialize_history()
 
     def _initialize_history(self):
@@ -148,11 +150,11 @@ class L96TwoLayer(L96Base):
         Iterates the two layer model
         """
         nt = int(T/self.dt)
-        X = np.zeros((nt, self.K))
-        U = np.zeros((nt, self.K))
-        Y = np.zeros((nt, self.K*self.J))
+        X = torch.zeros((nt, self.K))
+        U = torch.zeros((nt, self.K))
+        Y = torch.zeros((nt, self.K*self.J))
 
-        time = np.zeros(nt)
+        time = torch.zeros(nt)
 
         Y[0] = self.Y
         X[0] = self.X
@@ -174,17 +176,17 @@ class L96TwoLayer(L96Base):
             self.U_history = U
             self.time_history = time
         else:
-            self.X_history = np.concatenate((self.X_history, X), axis=0)
-            self.Y_history = np.concatenate((self.Y_history, Y), axis=0)
-            self.U_history = np.concatenate((self.U_history, U), axis=0)
-            self.time_history = np.concatenate((self.time_history, time), axis=0)
+            self.X_history = torch.concatenate((self.X_history, X), axis=0)
+            self.Y_history = torch.concatenate((self.Y_history, Y), axis=0)
+            self.U_history = torch.concatenate((self.U_history, U), axis=0)
+            self.time_history = torch.concatenate((self.time_history, time), axis=0)
         
         return X, Y, U, time
     
     
 class L96OneLayerParam(L96OneLayer):
     """Parameterized single-layer Lorenz '96 model"""
-    def __init__(self, X_0, param_func, dt=0.001, F=20):
+    def __init__(self, X_0, param_func, dt=0.001, F=20, device='cpu'):
         """
         Initialize parameterized one-layer model
         
@@ -194,19 +196,19 @@ class L96OneLayerParam(L96OneLayer):
             dt (float): time step for integration
             F (float): Forcing parameter
         """
-        super().__init__(X_0, dt=dt, F=F)
+        super().__init__(X_0, dt=dt, F=F, device=device)
         self.param_func = param_func
 
     def iterate(self, T):
         """Iterate model forward in time"""
         nt = int(T/self.dt)
-        X = np.zeros((nt, self.K))
-        U = np.zeros((nt, self.K))
-        time = np.zeros(nt)
+        X = torch.zeros((nt, self.K))
+        U = torch.zeros((nt, self.K))
+        time = torch.zeros(nt)
 
         X[0] = self.X
         time[0] = self.time
-        for t in range(1,nt):
+        for t in range(1, nt):
             U[t] = self.param_func(X[t-1])
             X[t] = RK2_step(X[t-1], dX_dt_onelayer, self.dt, F=self.F, U=U[t])
             time[t] = time[t-1] + self.dt
@@ -221,9 +223,9 @@ class L96OneLayerParam(L96OneLayer):
             self.U_history = U
             self.time_history = time
         else:
-            self.X_history = np.concatenate((self.X_history, X), axis=0)
-            self.U_history = np.concatenate((self.U_history, U), axis=0)
-            self.time_history = np.concatenate((self.time_history, time), axis=0)
+            self.X_history = torch.concatenate((self.X_history, X), axis=0)
+            self.U_history = torch.concatenate((self.U_history, U), axis=0)
+            self.time_history = torch.concatenate((self.time_history, time), axis=0)
         
         return X, U, time
             

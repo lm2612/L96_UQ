@@ -31,11 +31,11 @@ dt_f = 0.05
 seed = 123
 np.random.seed(seed)
 
-N_train = 100
-model_name =  f"BayesianLinearRegression_N{N_train}"      # Choose LinearRegression or NN 
+N_train = 50
+model_name =  f"BayesianNN_2layer_N{N_train}"      # Choose LinearRegression or NN 
 
 # Define model and guide
-model = BayesianLinearRegression(1, 1) #, [32, 32])
+model = BayesianNN(1, 1, [32, 32])
 total_params = sum(p.numel() for p in model.parameters())
 
 print("TOTAL PARAMS: ", total_params)

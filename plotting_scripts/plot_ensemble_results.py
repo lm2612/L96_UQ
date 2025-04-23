@@ -30,8 +30,8 @@ np.random.seed(seed)
 
 
 # models to plot
-N_train = 100
-model_names =  [ f"BayesianNN_2layer_N{N_train}/both_", 
+N_train = 50
+model_names =  [ f"BayesianNN_2layer_N{N_train}/aleatoric_", 
 #f"BayesianNN_2layer_N{N_train}/epistemic_",
 #f"BayesianNN_2layer_N{N_train}/aleatoric_",
 #f"AleatoricNN_2layer_N{N_train}/"

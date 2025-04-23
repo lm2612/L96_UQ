@@ -51,10 +51,12 @@ subsample_factor = 5
 dt_f = dt * subsample_factor
 print(f"Subsampling data by factor {subsample_factor} to dt_f = {dt_f}")
 X = X[::subsample_factor]
+Y = Y[::subsample_factor]
 U_est = subgrid_component(X[1:], X[:-1], dt_f, F)
 np.save(f'{save_path}/U_dtf.npy', U_est)
 
 np.save(f'{save_path}/X_dtf.npy', X)
+np.save(f'{save_path}/Y_dtf.npy', Y)
 
 
 print(f"Saved to {data_path}/")

@@ -5,6 +5,7 @@ colors = {"Truth": "black",
          "NN_2layer_N100/":"midnightblue",
          # Dropout (epistemic - lighter, purple)
          "DropoutNN_2layer_N100/":"pink",
+         "DropoutNN_2layer_N100/deterministic_":"magenta",
          # Maxlikelihood models (aleatoric - lighter, yellow)
          "AleatoricLinearRegression_N100/":"red",
          "AleatoricNN_2layer_N100/":"darkgoldenrod",
@@ -15,13 +16,18 @@ colors = {"Truth": "black",
          "BayesianNN_2layer_N100/epistemic_":"darkorchid",
          "BayesianNN_2layer_N100/aleatoric_":"seagreen",
          "BayesianNN_2layer_N100/both_":"blue",
-         "BayesianNN_2layer_N100/deterministic_":"midnightblue"
+         "BayesianNN_2layer_N100/deterministic_":"midnightblue",
+         "BayesianNN_2layer_N50/epistemic_":"darkorchid",
+         "BayesianNN_2layer_N50/aleatoric_":"seagreen",
+         "BayesianNN_2layer_N50/both_":"blue",
+         "BayesianNN_2layer_N50/deterministic_":"midnightblue"
           }
 
 labels = {"Truth":"Truth",
          "OneLayer/":"OneLayer",
          # Dropout
          "DropoutNN_2layer_N100/":"NN drp",
+         "DropoutNN_2layer_N100/deterministic_":"NN drp det",
          # Deterministic models
          "LinearRegression_N100/":"LR",
          "NN_2layer_N100/":"NN",
@@ -35,5 +41,9 @@ labels = {"Truth":"Truth",
          "BayesianNN_2layer_N100/epistemic_":"BNN epi",
          "BayesianNN_2layer_N100/aleatoric_":"BNN ale",
          "BayesianNN_2layer_N100/both_":"BNN both",
-         "BayesianNN_2layer_N100/deterministic_":"BNN det"
+         "BayesianNN_2layer_N100/deterministic_":"BNN det",
+         "BayesianNN_2layer_N50/epistemic_":"BNN epi",
+         "BayesianNN_2layer_N50/aleatoric_":"BNN ale",
+         "BayesianNN_2layer_N50/both_":"BNN both",
+         "BayesianNN_2layer_N50/deterministic_":"BNN det"
 }

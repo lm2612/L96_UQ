@@ -30,13 +30,13 @@ dt_f = dt * 5
 seed = 123
 np.random.seed(seed)
 
-N_train = 100
-model_name = f"AleatoricNN_2layer_N{N_train}"      # Choose LinearRegression or NN  or OneLayer
+N_train = 50
+model_name = f"BayesianNN_2layer_N{N_train}"      # Choose LinearRegression or NN  or OneLayer
 #model_name = f"BayesianLinearRegression_N{N_train}"
 #model_name = f"BayesianNN_2layer_N{N_train}"
 #model_name = f"BayesianLinearRegression_N{N_train}"
-runtype = "deterministic"    # epistemic, aleatoric or None
-n_ens = 1               # number of times to run for (for deterministic this will be 1) (quite slow when running large ensembles eg 50)
+runtype = "both"    # epistemic, aleatoric or None
+n_ens = 50               # number of times to run for (for deterministic this will be 1) (quite slow when running large ensembles eg 50)
 # Set up directory
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
 save_model_path = f'{data_path}/{model_name}/'
@@ -83,9 +83,8 @@ if "Bayesian" in model_name:
     else:
         raise ValueError(f"{runtype} unknown, must be epistemic, aleatoric or mean.")
     def param_func(x):
-        nn_input = torch.tensor(x, dtype=torch.float32).unsqueeze(-1)
-        out = predictive(nn_input)[return_site]
-        return out.squeeze().numpy()
+        out = predictive(x.unsqueeze(-1))[return_site]
+        return out.squeeze()
 
     save_model_path = f'{save_model_path}/{runtype}_'
 elif "Aleatoric" in model_name:
@@ -99,41 +98,44 @@ elif "Aleatoric" in model_name:
 
     if runtype == "deterministic":
         # Initialize param_func
-        def param_func(X):
-            nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+        def param_func(x):
             with torch.no_grad():
-                pred = ml_model(nn_input).detach()
+                pred = ml_model(x.unsqueeze(-1))
             # Split into mean and variance
             mean, std = pred.chunk(2, dim=-1)
-            return mean.squeeze().numpy()
+            return mean.squeeze()
         save_model_path = f'{save_model_path}/{runtype}_'
 
     else:
         # Initialize param_func
-        def param_func(X):
-            nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+        def param_func(x):
             with torch.no_grad():
-                pred = ml_model(nn_input).detach()
+                pred = ml_model(x.unsqueeze(-1))
             # Split into mean and variance
             mean, std = pred.chunk(2, dim=-1)
-            out = np.random.normal(loc=mean.squeeze().numpy(), scale=std.squeeze().numpy())
+            out = np.random.normal(loc=mean.squeeze(), scale=std.squeeze())
             return  out
 elif "Dropout" in model_name:
-    if runtype != "epistemic":
-        warnings.warn(f"only runtype=epistemic valid. You set runtype={runtype}. This will be ignored.")
-        runtype = "epistemic"
+   
     print(f"Dropout run: {model_name}")
     output_dicts = torch.load(f"{save_model_path}/model_best.pt")
     ml_model = output_dicts["model"]
-    # Use training mode rather than eval mode to add stochasticity!
-    ml_model.train()
+    if runtype == "epistemic":
+        # Use training mode rather than eval mode to add stochasticity!
+        ml_model.train()
+    elif runtype == "deterministic":
+        ml_model.eval()
+        n_ens = 1
+        save_model_path = f'{save_model_path}/{runtype}_'
+    else:
+        raise ValueError(f"Must be run either in epistemic or deterministic mode.")
+
 
     # Initialize param_func
-    def param_func(X):
-        nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+    def param_func(x):
         with torch.no_grad():
-            out = ml_model(nn_input)
-        return  out.squeeze().numpy()
+            out = ml_model(x.unsqueeze(-1))
+        return  out.squeeze()
 else:
     print(f"Deterministic run: {model_name}")
     if runtype != "":
@@ -147,19 +149,18 @@ else:
         print("Running single layer model with no parameterisation")
         # run with zero parameterisation
         # Initialize param_func
-        def param_func(X):
-            return  np.zeros_like(X)
+        def param_func(x):
+            return  np.zeros_like(x)
     else:
         output_dicts = torch.load(f"{save_model_path}/model_best.pt")
         ml_model = output_dicts["model"]
         ml_model.eval()
 
         # Initialize param_func
-        def param_func(X):
-            nn_input = torch.tensor(X, dtype=torch.float32).unsqueeze(-1)
+        def param_func(x):
             with torch.no_grad():
-                out = ml_model(nn_input)
-            return  out.squeeze().numpy()
+                out = ml_model(x.unsqueeze(-1))
+            return  out.squeeze()
 
 # Load truth data
 X_truth = np.load(f"{data_path}/truth/X_dtf.npy")
@@ -180,6 +181,7 @@ print(f"Running model for {N_init} initial conditions, for T={T}MTU / {nt} times
 X_all = np.zeros((n_ens, N_init * nt, K))
 U_all = np.zeros((n_ens, N_init * nt, K))
 t=0
+
 for i in range(N_init):
     print(f"Initial condition {i}")
     # Repeat for n_ens ensemble members (n_ens = 1 if deterministic)

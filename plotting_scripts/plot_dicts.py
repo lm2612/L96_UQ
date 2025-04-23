@@ -1,3 +1,59 @@
+plot_dict = { 
+    "Truth" : {
+        "color":"black",
+        "label":"Truth",
+        "path":"Truth/",
+        },
+    "OneLayer" : {
+        "color":"gray",
+        "label":"OneLayer",
+        "path":"OneLayer/",
+        },
+    "LinearRegression": {
+        "color":"gray",
+        "label":"LR",
+        "path":"LinearRegression_N{N_train}/",
+        },
+    "NN" : {
+        "color":"midnightblue",
+        "label":"NN",
+        "path":"NN_2layer_N{N_train}/",
+        },  
+    "DropoutNN" : {
+        "color":"pink",
+        "label":"NN drp",
+        "path":"DropoutNN_2layer_N{N_train}/",
+        },
+    "EnsNN" : {
+        "color":"deeppink",
+        "label":"NN ens",
+        "path":"NN_2layer_N{N_train}_seed{seed}",
+        },
+    "AleatoricNN" : {
+        "color":"darkgoldenrod",
+        "label":"NN mle",
+        "path":"AleatoricNN_2layer_N{N_train}/",
+        },
+    "BayesianNN" : {
+        "color":"blue",
+        "label":"BNN both",
+        "path":"BayesianNN_2layer_N{N_train}/both_",
+        },
+    "BayesianNNepistemic" : {
+        "color":"darkorchid",
+        "label":"BNN epi",
+        "path":"BayesianNN_2layer_N{N_train}/epistemic_",
+        },
+    "BayesianNNaleatoric" : {
+        "color":"seagreen",
+        "label":"BNN ale",
+        "path":"BayesianNN_2layer_N{N_train}/aleatoric_",
+        },
+}
+
+              
+
+
 colors = {"Truth": "black",
           "OneLayer/":"gray",
           # Deterministic models

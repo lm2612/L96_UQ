@@ -30,6 +30,7 @@ def test_stationary_distributions_onelayer(model_params, plot=False):
     # Test One Layer Model
     model = L96OneLayer(X_0, dt=dt, F=model_params['F'])
     X, time = model.iterate(T)
+    X = X.numpy()
 
     # First test stability
     assert np.all(np.isfinite(X)), "One layer model unstable: X is not finite"
@@ -70,6 +71,8 @@ def test_stationary_distributions_twolayer(model_params, plot=False):
                         b=model_params['b'], 
                         h=model_params['h'])
     X, Y, U, time = model.iterate(T)
+    X = X.numpy()
+    Y = Y.numpy()
 
     # First test stability
     assert np.all(np.isfinite(X)), "Two layer model unstable: X is not finite"

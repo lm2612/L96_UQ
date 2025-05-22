@@ -11,6 +11,7 @@ def train(params, training_params, model_name, model):
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
     N_train = training_params['N_train']
+    batch_size = training_params['batch_size']
 
     # Set up directory
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
@@ -132,6 +133,7 @@ def train(params, training_params, model_name, model):
     plt.title("2-layer NN")
     plt.savefig(f"{save_model_path}/input_outputs_NN.png")
     print("Plots done")
+    plt.close()
 
 if __name__ == "__main__":
     params ={
@@ -144,11 +146,13 @@ if __name__ == "__main__":
         'dt': 0.001,
         'dt_f': 0.005,
     }
-    training_params = {'N_train': 100}
+    training_params = {'N_train': 50, 
+                       'batch_size':128,
+                       'N_timesteps':1}
     N_train = training_params['N_train']
-    seeds = range(100, 150)
+    seeds = range(100, 101) #, 150)
     for seed in seeds:
-        model_name =  f"NN_2layer_N{N_train}_seed{seed}"      # Choose LinearRegression or NN 
+        model_name =  f"NN_2layer_N{N_train}"      # Choose LinearRegression or NN 
         np.random.seed(seed)
         model = NN(1, 1, [32, 32]) #, dropout_rate=0.5)
         total_params = sum(p.numel() for p in model.parameters())

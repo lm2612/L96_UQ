@@ -31,7 +31,7 @@ def subgrid_component(X_curr, X_prev, dt, F):
 # Define classes for L96 models
 class L96Base:
     """Base class for Lorenz '96 models"""
-    def __init__(self, dt=0.001, device='cpu'):
+    def __init__(self, dt=0.001, device='cpu', requires_grad=False):
         """
         Initialize base L96 model
         
@@ -42,11 +42,12 @@ class L96Base:
         self.time = 0.0
         self.X = None
         self.device = device
+        self.requires_grad = requires_grad
     
     def _torch(self, X_0):
         """Convert input to torch tensor if needed"""
         if not isinstance(X_0, torch.Tensor):
-            X_0 = torch.tensor(X_0, dtype=torch.float32, device=self.device)
+            X_0 = torch.tensor(X_0, dtype=torch.float32, device=self.device, requires_grad=self.requires_grad)
         return X_0
     
     def get_solution(self):
@@ -64,7 +65,7 @@ class L96Base:
 
 class L96OneLayer(L96Base):
     """Single layer Lorenz '96 model"""
-    def __init__(self, X_0, dt=0.001, F=20, device='cpu'):
+    def __init__(self, X_0, dt=0.001, F=20, device='cpu', requires_grad=False):
         """
         Initialize one-layer model
         
@@ -73,7 +74,7 @@ class L96OneLayer(L96Base):
             dt (float): time step for integration
             F (float): Forcing parameter
         """
-        super().__init__(dt=dt, device=device)
+        super().__init__(dt=dt, device=device, requires_grad=requires_grad)
         self.X = self._torch(X_0)
         self.K = len(X_0)
         self.F = self._torch(F)
@@ -186,7 +187,7 @@ class L96TwoLayer(L96Base):
     
 class L96OneLayerParam(L96OneLayer):
     """Parameterized single-layer Lorenz '96 model"""
-    def __init__(self, X_0, param_func, dt=0.001, F=20, device='cpu'):
+    def __init__(self, X_0, param_func, dt=0.001, F=20, device='cpu', requires_grad=False):
         """
         Initialize parameterized one-layer model
         
@@ -196,7 +197,7 @@ class L96OneLayerParam(L96OneLayer):
             dt (float): time step for integration
             F (float): Forcing parameter
         """
-        super().__init__(X_0, dt=dt, F=F, device=device)
+        super().__init__(X_0, dt=dt, F=F, device=device, requires_grad=requires_grad)
         self.param_func = param_func
 
     def iterate(self, T):
@@ -229,3 +230,16 @@ class L96OneLayerParam(L96OneLayer):
         
         return X, U, time
             
+    def iterate_torch(self, T):
+        """Iterate model forward in time"""
+        nt = int(T/self.dt)
+        X = self.X
+        time = self.time
+        for t in range(1,nt):
+            U = self.param_func(X)
+            X = RK2_step(X, dX_dt_onelayer, self.dt, F=self.F, U=U)
+            time = time + self.dt
+        
+        self.X = X
+        self.time = time
+        

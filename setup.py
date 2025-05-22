@@ -6,6 +6,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "numpy",
+        #"torch"
         # add other dependencies
     ],
     extras_require={

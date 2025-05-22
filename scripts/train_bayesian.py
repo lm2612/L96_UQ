@@ -7,7 +7,7 @@ import torch
 import pyro
 import pyro.distributions as dist
 from pyro.nn import PyroModule, PyroSample
-from pyro.infer.autoguide import AutoDiagonalNormal #TODO: AutoMultivariateNormal
+from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, AutoLowRankMultivariateNormal
 from pyro.infer import SVI, Trace_ELBO, Predictive
 from pyro.optim import Adam
 
@@ -32,7 +32,7 @@ seed = 123
 np.random.seed(seed)
 
 N_train = 50
-model_name =  f"BayesianNN_2layer_N{N_train}"      # Choose LinearRegression or NN 
+model_name =  f"BayesianNN_multivariate_2layer_N{N_train}"      # Choose LinearRegression or NN 
 
 # Define model and guide
 model = BayesianNN(1, 1, [32, 32])
@@ -41,8 +41,8 @@ total_params = sum(p.numel() for p in model.parameters())
 print("TOTAL PARAMS: ", total_params)
 
 # Guide
-guide = AutoDiagonalNormal(model)
-
+#guide = AutoDiagonalNormal(model)
+guide = AutoLowRankMultivariateNormal(model)
 
 # Set up directory
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
@@ -83,7 +83,7 @@ Y_val = torch.tensor(targets_val, dtype=torch.float32).reshape((-1, 1))
 adam = pyro.optim.Adam({"lr": 0.03})
 svi = SVI(model, guide, adam, loss=Trace_ELBO())
 
-num_iterations=500
+num_iterations=5000
 losses = []
 losses_val = []
 min_loss = 1E8

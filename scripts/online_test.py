@@ -16,22 +16,30 @@ from L96.L96_model import L96OneLayerParam
 def test(params, test_params, model_name):
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
-    runtype = test_params['runtype']
-    n_ens = test_params['runtype']
+    runtype, N_init, T = test_params['runtype'], test_params['N_init'], test_params['T']
+    n_ens = test_params['n_ens']
+    save_prefix = test_params['save_prefix']
+    
 
-    # Set up directory
-    data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
-    save_model_path = f'{data_path}/{model_name}/'
+    # Set up directories
+    data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/truth/'
+    load_model_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/{model_name}/' 
+
+    F = test_params['F']
+    save_model_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/{model_name}/' 
     if not os.path.exists(save_model_path):
         os.makedirs(save_model_path)
-    print(save_model_path)
+    print(f"Model path: {save_model_path}")
+    print(f"Simulations will be saved under {save_model_path}/{save_prefix}")
 
 
     # Load ml param model: This depends on the type of the model
     if "Bayesian" in model_name:
         print(f"Running Bayesian NN - a stochastic parameterisation: {model_name} using {runtype} uncertainty, {n_ens} ensemble members")
-        output_dicts = torch.load(f"{save_model_path}/model_best.pt")
-        pyro.get_param_store().load(f"{save_model_path}/pyro_params.pt")
+        output_dicts = torch.load(f"{load_model_path}/model_best.pt", weights_only=False)
+        print(output_dicts['guide'])
+        print(pyro.get_param_store().named_parameters())
+        pyro.get_param_store().load(f"{load_model_path}/pyro_params.pt")
 
         pyro_model = output_dicts["model"]
         guide = output_dicts["guide"]
@@ -68,13 +76,14 @@ def test(params, test_params, model_name):
             out = predictive(x.unsqueeze(-1))[return_site]
             return out.squeeze()
 
-        save_model_path = f'{save_model_path}/{runtype}_'
+        if save_prefix is None:
+            save_model_path = f'{save_model_path}/{runtype}_'
     elif "Aleatoric" in model_name:
         print(f"Stochastic run: {model_name}")
         if runtype == "epistemic":
             raise ValueError(f"Must be run either in aleatoric or determinstic mode.")
         
-        output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+        output_dicts = torch.load(f"{load_model_path}/model_best.pt")
         ml_model = output_dicts["model"]
         ml_model.eval()
 
@@ -86,7 +95,8 @@ def test(params, test_params, model_name):
                 # Split into mean and variance
                 mean, std = pred.chunk(2, dim=-1)
                 return mean.squeeze()
-            save_model_path = f'{save_model_path}/{runtype}_'
+            if save_prefix is None:
+                save_model_path = f'{save_model_path}/{runtype}_'
 
         else:
             # Initialize param_func
@@ -100,7 +110,7 @@ def test(params, test_params, model_name):
     elif "Dropout" in model_name:
     
         print(f"Dropout run: {model_name}")
-        output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+        output_dicts = torch.load(f"{load_model_path}/model_best.pt")
         ml_model = output_dicts["model"]
         if runtype == "epistemic":
             # Use training mode rather than eval mode to add stochasticity!
@@ -108,7 +118,8 @@ def test(params, test_params, model_name):
         elif runtype == "deterministic":
             ml_model.eval()
             n_ens = 1
-            save_model_path = f'{save_model_path}/{runtype}_'
+            if save_prefix is None:
+                save_model_path = f'{save_model_path}/{runtype}_'
         else:
             raise ValueError(f"Must be run either in epistemic or deterministic mode.")
 
@@ -134,7 +145,7 @@ def test(params, test_params, model_name):
             def param_func(x):
                 return  np.zeros_like(x)
         else:
-            output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+            output_dicts = torch.load(f"{load_model_path}/model_best.pt")
             ml_model = output_dicts["model"]
             ml_model.eval()
 
@@ -145,25 +156,21 @@ def test(params, test_params, model_name):
                 return  out.squeeze()
 
     # Load truth data
-    X_truth = np.load(f"{data_path}/truth/X_dtf.npy")
-    # Select initial conditions, separated by intervals of 10MTU 
-    T = 10
-    sep = int(T/dt_f)
-    print(f"Initial conditions separated by {sep} time units")
-    X_init_conds = X_truth[::sep]
-    N_init = X_init_conds.shape[0]
-    nt_total = X_truth.shape[0]
-
-    # Check 
+    X_truth = np.load(f"{data_path}/X_dtf.npy")
     nt = int(T/dt_f)
-    assert(N_init * nt == nt_total)
+    X_init_conds = X_truth[::nt]
+    # Check N_init cannot be longer than length of initial conditions
+    if N_init > X_init_conds.shape[0] :
+        raise ValueError(f"N_init larger than the available number of intiial conditions in {data_path}/X_dtf.npy. Reduce T={T} or N_init={N_init}")
+
+    nt_total = N_init * nt
     print(f"Running model for {N_init} initial conditions, for T={T}MTU / {nt} timesteps). Total timesteps={nt_total}. ")
 
     # Run each model for 10MTU
-    X_all = np.zeros((n_ens, N_init * nt, K))
-    U_all = np.zeros((n_ens, N_init * nt, K))
+    X_all = np.zeros((n_ens, nt_total, K))
+    U_all = np.zeros((n_ens, nt_total, K))
     t=0
-
+    
     for i in range(N_init):
         print(f"Initial condition {i}")
         # Repeat for n_ens ensemble members (n_ens = 1 if deterministic)
@@ -181,10 +188,10 @@ def test(params, test_params, model_name):
 
 
     # Save results
-    np.save(f"{save_model_path}X_dtf.npy", X_all)
-    np.save(f"{save_model_path}U_dtf.npy", U_all)
+    np.save(f"{save_model_path}/{save_prefix}X_dtf.npy", X_all)
+    np.save(f"{save_model_path}/{save_prefix}U_dtf.npy", U_all)
 
-    print(f"Done. Saved to {save_model_path}")
+    print(f"Done. Saved to {save_model_path}/{save_prefix}X_dtf.npy")
 
 
 if __name__ == "__main__":
@@ -198,10 +205,32 @@ if __name__ == "__main__":
         'dt': 0.001,
         'dt_f': 0.005,
     }
-    test_params = {'runtype': None, 
-                   'n_ens': 1 }
+    test_params = {'runtype': None,
+                    'save_prefix':'longrun_',
+                   'n_ens': 1,
+                   'N_init':1,
+                   'T':100 ,
+                   'F':14                  }
     N_train = 100
-    seeds = range(100, 150)
-    for seed in seeds:
-        model_name =  f"NN_2layer_N{N_train}_seed{seed}"      # Choose LinearRegression or NN 
+
+    for N_train in [50]:
+        #model_name = "NN_2layer_N50"
+        #test(params, test_params, model_name)
+        
+        model_name =  f"BayesianNN_multivariate_2layer_N{N_train}" 
+        test_params['runtype'] = 'epistemic'
+        test_params['save_prefix'] = 'epistemic_' 
         test(params, test_params, model_name)
+
+        test_params['runtype'] = 'aleatoric'
+        test_params['save_prefix'] = 'aleatoric_' 
+        test(params, test_params, model_name)
+
+        test_params['runtype'] = 'both'
+        test_params['save_prefix'] = 'both_' 
+        test(params, test_params, model_name)
+
+    #seeds = range(100, 101)
+    #for seed in seeds:
+    #    model_name =  f"NN_2layer_online_Ntime200_seed{seed}"      # Choose LinearRegression or NN 
+    #    test(params, test_params, model_name)

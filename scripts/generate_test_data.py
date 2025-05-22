@@ -19,19 +19,20 @@ b = 10
 
 # Define time-stepping, random seed
 dt = 0.001
-T = 1000
+T = 100
 seed = 123
 np.random.seed(seed)
 
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
-save_path = f'{data_path}/truth/'
-if not os.path.exists(save_path):
-    os.makedirs(save_path)
-
-
 # Load initial conditions
 X0 = np.load(f'{data_path}/X_init.npy')
 Y0 = np.load(f'{data_path}/Y_init.npy')
+
+# Run with F=24
+F = 10
+save_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
+if not os.path.exists(save_path):
+    os.makedirs(save_path)
 
 # Set up model
 lorenz_model = L96TwoLayer(X_0=X0, Y_0=Y0, F=F, c=c, b=b, h=h, dt=dt)
@@ -59,6 +60,6 @@ np.save(f'{save_path}/X_dtf.npy', X)
 np.save(f'{save_path}/Y_dtf.npy', Y)
 
 
-print(f"Saved to {data_path}/")
+print(f"Saved to {save_path}/")
 
 

@@ -28,13 +28,15 @@ seed = 123
 np.random.seed(seed)
 
 # models to plot
-N_train = 100
+N_train = 50
 model_names =  [
  #f"DropoutNN_2layer_N{N_train}/",
  #f"AleatoricNN_2layer_N{N_train}/",
- f"BayesianNN_2layer_N{N_train}/epistemic_",
- f"BayesianNN_2layer_N{N_train}/aleatoric_", 
- f"BayesianNN_2layer_N{N_train}/both_", 
+  f"BayesianNN_multivariate_2layer_N{N_train}/both_", 
+
+ f"BayesianNN_multivariate_2layer_N{N_train}/epistemic_",
+ f"BayesianNN_multivariate_2layer_N{N_train}/aleatoric_", 
+# f"BayesianNN_2layer_N{N_train}/both_", 
  #f"BayesianNN_2layer_N{N_train}/deterministic_", 
 
  ]      # Stochastic models only
@@ -184,13 +186,14 @@ for i in range(N_init):
     print(f"Saved to {plot_path}X_spread_timeseries_{i}.png")
 
 
-err_threshold = 2.
-std_threshold = 2.
+err_threshold = 1.
+std_threshold = 1.
 fig, axs = plt.subplots(1, 1, figsize=(6, 4), sharex=True)
 
 
 
 for i in range(N_init):
+    continue
     # Plot
     for X_ml, model_name in zip(X_mls, model_names):
         n_ens = X_ml.shape[0]
@@ -216,6 +219,35 @@ plt.tight_layout()
 plt.savefig(f"{plot_path}time_until_divergence.png")
 
 
+plt.clf()
+fig, axs = plt.subplots(1, 1, figsize=(6, 4), sharex=True)
+T = 0.6
+t = int(T/dt_f)
+print(t)
+for i in range(4):
+    # Plot
+    for X_ml, model_name in zip(X_mls, model_names):
+        n_ens = X_ml.shape[0]
+        if n_ens == 1:
+            continue
+        X_abs_diff = np.abs(X_ml[:, i, t] - X_truth[i, t])
+        X_mae = X_abs_diff.mean(axis=0)
+        X_rmse = np.sqrt((X_abs_diff**2).mean(axis=0)).flatten()
+        mean_err = np.abs(X_ml[:, i, t].mean(axis=0) - X_truth[i, t]).flatten()
+        X_std = X_ml[:, i, t].std(axis=0).flatten()
+
+        axs.scatter(X_mae, X_std,
+            label=labels[model_name] if i == 0 else None,
+            alpha=0.8,
+            color=colors[model_name])
+if  len(model_names) > 1:  
+    axs.legend(loc="upper left")
+axs.set_ylabel(f"Spread at time {T}")
+axs.set_xlabel(f"Error in mean at time {T}")
+axs.plot([0., 6.], [0., 6.], color="black", linestyle="dashed")
+plt.tight_layout()
+plt.savefig(f"{plot_path}error_v_spread_scatter_t{T}.png")
+print(f"{plot_path}error_v_spread_scatter_t{T}.png")
 
 plt.clf()
 fig, axs = plt.subplots(1, 2, figsize=(12, 4))
@@ -237,7 +269,6 @@ for X_ml, model_name in zip(X_mls, model_names):
         X_std = X_abs_diff.std(axis=0).mean(axis=-1)
         time_stds.append(time[np.argwhere(X_std > std_threshold)[0]][0])
 
-    print(time_errs)
     axs[0].plot(domain, kde_plot(time_errs, domain), 
     alpha=0.6,
     color = colors[model_name],

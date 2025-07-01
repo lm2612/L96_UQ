@@ -178,3 +178,47 @@ for F in Fs:
 plot_fname = f"{plot_path}/time_spent_in_regime_pert.png"
 plt.savefig(plot_fname)
 print(f"Saved to {plot_fname}")
+
+
+
+# Time spent in regime + UQ for diff F=14
+F = 14
+pert_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
+plt.clf()
+runtypes = ['aleatoric', 'epistemic', 'both', 'deterministic']
+colors = ['seagreen', 'darkorchid', 'blue', 'grey']
+model_name = 'BayesianNN_2layer_N50'
+pred_regimes = []
+
+X_pert = np.load(f"{pert_path}/X_dtf.npy").squeeze()
+X_transformed = pca.transform(X_pert)
+pert_regimes = np.argmax(X_transformed, axis=1)//2
+
+
+for runtype, color in zip(runtypes,colors):
+    filename = f'{pert_path}/{model_name}/longrun_{runtype}_X_dtf.npy' 
+    X = np.load(filename).squeeze()
+    X_transformed = pca.transform(X)
+    NT = X.shape[0]
+    max_pc = np.argmax(X_transformed, axis=1)
+    ax.plot(np.arange(NT), max_pc//2, alpha=0.5, color=color, label=runtype)
+    pred_regimes.append(max_pc//2)
+
+true_regimes = true_regimes[:NT]
+print(np.sum(true_regimes==0), np.sum(true_regimes==1))
+plt.bar(["Truth F=20"],  np.sum(true_regimes==0)+ np.sum(true_regimes==1), color="red", label="Regime 2 (wn 1)")
+plt.bar(["Truth F=20"], np.sum(true_regimes==0), color="blue", label="Regime 1 (wn 2)")
+
+plt.bar(["Truth F=14"], np.sum(pert_regimes==0)+np.sum(pert_regimes==1), color="red")
+plt.bar(["Truth F=14"], np.sum(pert_regimes==0), color="blue")
+
+for i in range(len(runtypes)):
+    pred_reg = pred_regimes[i]
+    print(runtypes[i], np.sum(pred_reg==0), np.sum(pred_reg==1))
+    plt.bar(runtypes[i], np.sum(pred_reg==0)+np.sum(pred_reg==1), color="red")
+    plt.bar(runtypes[i], np.sum(pred_reg==0), color="blue")
+
+plt.legend(loc = "lower right")
+plot_fname = f"{plot_path}/time_spent_in_regime_F14.png"
+plt.savefig(plot_fname)
+print(f"Saved to {plot_fname}")

@@ -69,14 +69,31 @@ colors = {"Truth": "black",
          # Bayesian models (epistemic - purple, aleatoric - green)
          "LinearRegression_N100/epistemic_":"orangered",
          "LinearRegression_N100/aleatoric_":"darkorange",
-         "BayesianNN_2layer_N100/epistemic_":"darkorchid",
-         "BayesianNN_2layer_N100/aleatoric_":"seagreen",
-         "BayesianNN_2layer_N100/both_":"blue",
-         "BayesianNN_2layer_N100/deterministic_":"midnightblue",
+         "BayesianNN_2layer_N10/epistemic_":"darkorchid",
+         "BayesianNN_2layer_N10/aleatoric_":"seagreen",
+         "BayesianNN_2layer_N10/both_":"blue",
+         "BayesianNN_2layer_N10/deterministic_":"midnightblue",
+         "BayesianNN_multivariate_2layer_N50/epistemic_":"darkorchid",
          "BayesianNN_2layer_N50/epistemic_":"darkorchid",
+         "BayesianNN_multivariate_2layer_N50/aleatoric_":"seagreen",
          "BayesianNN_2layer_N50/aleatoric_":"seagreen",
+         "BayesianNN_multivariate_2layer_N50/both_":"blue",
          "BayesianNN_2layer_N50/both_":"blue",
-         "BayesianNN_2layer_N50/deterministic_":"midnightblue"
+         "BayesianNN_2layer_N50/deterministic_":"midnightblue",
+         "BayesianNN_2layer_N500/epistemic_":"darkorchid",
+         "BayesianNN_2layer_N500/aleatoric_":"seagreen",
+         "BayesianNN_2layer_N500/both_":"blue",
+         "BayesianNN_2layer_N1000/epistemic_":"darkorchid",
+         "BayesianNN_2layer_N1000/aleatoric_":"seagreen",
+         "BayesianNN_2layer_N1000/both_":"blue",
+         "NN_2layer_online_Ntime2_seed100/":"midnightblue",
+         "NN_2layer_online_Ntime10_seed100/":"blue",
+         "NN_2layer_online_Ntime50_seed100/":"lightblue",
+         "NN_2layer_online_Ntime100_seed100/":"skyblue",
+         "NN_2layer_online_Ntime200_seed100/":"turquoise",
+         "NN_2layer_regime0_N50/longrun_":"blue",
+         "NN_2layer_regime1_N50/longrun_":"red",
+
           }
 
 labels = {"Truth":"Truth",
@@ -94,12 +111,51 @@ labels = {"Truth":"Truth",
          # Bayesian models
          "LinearRegression_N100/epistemic_":"LR epi",
          "LinearRegression_N100/aleatoric_":"LR ale",
-         "BayesianNN_2layer_N100/epistemic_":"BNN epi",
-         "BayesianNN_2layer_N100/aleatoric_":"BNN ale",
-         "BayesianNN_2layer_N100/both_":"BNN both",
-         "BayesianNN_2layer_N100/deterministic_":"BNN det",
+         "BayesianNN_2layer_N10/epistemic_":"BNN epi",
+         "BayesianNN_2layer_N10/aleatoric_":"BNN ale",
+         "BayesianNN_2layer_N10/both_":"BNN both",
+         "BayesianNN_2layer_N10/deterministic_":"BNN det",
          "BayesianNN_2layer_N50/epistemic_":"BNN epi",
-         "BayesianNN_2layer_N50/aleatoric_":"BNN ale",
+
+         "BayesianNN_2layer_N50/aleatoric_":"BNN ale ",
          "BayesianNN_2layer_N50/both_":"BNN both",
-         "BayesianNN_2layer_N50/deterministic_":"BNN det"
+         "BayesianNN_2layer_N50/epistemic_":"BNN epi",
+
+         "BayesianNN_multivariate_2layer_N50/aleatoric_":"BNNmv ale ",
+         "BayesianNN_multivariate_2layer_N50/both_":"BNNmv both",
+         "BayesianNN_multivariate_2layer_N50/epistemic_":"BNNmv epi",
+         "BayesianNN_2layer_N500/aleatoric_":"BNN ale",
+         "BayesianNN_2layer_N500/both_":"BNN both",
+         "BayesianNN_2layer_N500/epistemic_":"BNN epi",
+         "BayesianNN_2layer_N1000/aleatoric_":"BNN ale",
+         "BayesianNN_2layer_N1000/both_":"BNN both",
+         "BayesianNN_2layer_N1000/epistemic_":"BNN epi",
+         "NN_2layer_online_Ntime2_seed100/":"online N=1",
+         "NN_2layer_online_Ntime10_seed100/":"online N=10",
+         "NN_2layer_online_Ntime50_seed100/":"online N=50",
+         "NN_2layer_online_Ntime100_seed100/":"online N=100",
+         "NN_2layer_online_Ntime200_seed100/":"online N=200",
+         "NN_2layer_regime0_N50/longrun_":"Regime 1",
+         "NN_2layer_regime1_N50/longrun_":"Regime 2",
+
 }
+
+
+def plotcolor(name):
+    if "aleatoric_AR1" in name:
+        return "lightgreen"
+    elif "aleatoric" in name:
+        return "seagreen"
+    elif "epistemic" in name:
+        return "darkorchid"
+    elif "both" in name:
+        return "blue"
+    elif "deterministic" in name:
+        return "midnightblue"
+    elif "Truth" in name:
+        return "black"
+    elif "Dropout" in name:
+        return "pink"
+    elif "Aleatoric" in name:
+        return "darkgoldenrod"
+    

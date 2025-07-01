@@ -8,7 +8,7 @@ from ml_models.TorchModels import LinearRegression, NN
 from L96.L96_model import L96OneLayerParam
 from utils.kde_plot import kde_plot
 
-from plot_dicts import colors, labels
+from plot_dicts import colors, labels, plotcolor
 
 # Get paths
 # Define dimensions of system (fixed)
@@ -28,7 +28,7 @@ seed = 123
 np.random.seed(seed)
 
 # models to plot
-N_train = 100
+N_train = 50
 model_names =  [
     #"OneLayer/", 
  #f"LinearRegression_N{N_train}/",
@@ -37,12 +37,20 @@ model_names =  [
  #f"DropoutNN0.8_2layer_N{N_train}/",
  #f"DropoutNN0.2_2layer_N{N_train}/",
  #f"AleatoricNN_2layer_N{N_train}/",
-f"BayesianNN_2layer_N{N_train}/epistemic_",
- f"BayesianNN_2layer_N{N_train}/aleatoric_", 
-f"BayesianNN_2layer_N{N_train}/both_", 
+#f"BayesianNN_2layer_N{N_train}/epistemic_",
+ f"BayesianNN_multivariatefull_2layer_N{N_train}/both_", 
+f"BayesianNN_multivariatefull_2layer_N{N_train}/epistemic_", 
+ f"BayesianNN_multivariatefull_2layer_N{N_train}/aleatoric_", 
+
+#f"BayesianNN_2layer_N{N_train}/both_", 
 #f"BayesianNN_2layer_N{N_train}/deterministic_", 
 
  ]      # Choose LinearRegression or NN 
+label_names = [ 
+"Both",
+"Epistemic",
+"Aleatoric"
+]
 
 
 # Set up directory
@@ -85,7 +93,7 @@ print(X_truth.shape)
 
 # Plot
 fig, axs = plt.subplots(1, 1, figsize=(6, 4), sharex=True)
-for X_ml, model_name in zip(X_mls, model_names):
+for X_ml, model_name, label_name in zip(X_mls, model_names, label_names):
     # Get variance across ensembles
     X_var = X_ml.var(axis=0)
     X_var = X_var.reshape((N_init, sep, K))
@@ -93,9 +101,9 @@ for X_ml, model_name in zip(X_mls, model_names):
     X_var = X_var.mean(axis=(0, 2))   
     X_std = np.sqrt(X_var) 
     axs.plot(time[0:nt], X_std, 
-    label=labels[model_name], 
+    label=label_name, 
     alpha=0.8,
-    color=colors[model_name])
+    color=plotcolor(model_name))
 axs.axis(xmin=0, xmax=10)
 axs.legend(loc="lower right")
 axs.set_ylabel(f"Standard deviation in ensemble")
@@ -106,7 +114,7 @@ print(f"Saved to {plot_path}/X_std_timeseries.png")
 
 # Plot
 fig, axs = plt.subplots(1, 1, figsize=(6, 4), sharex=True)
-for X_ml, model_name in zip(X_mls, model_names):
+for X_ml, model_name, label_name in zip(X_mls, model_names, label_names):
     # Take mean prediction across ensembles (only relevant if n_ens > 1)
     X_mean = X_ml.mean(axis=0)
     X_mean = X_mean.reshape((N_init, sep, K))
@@ -114,9 +122,9 @@ for X_ml, model_name in zip(X_mls, model_names):
     X_diff_squared = ((X_mean - X_truth)**2).mean(axis=(0, 2))
     X_rmse = np.sqrt(X_diff_squared)
     axs.plot(time[0:nt], X_rmse, 
-    label=labels[model_name] + " RMSE", 
+    label=label_name + " RMSE", 
     alpha=0.8,
-    color=colors[model_name])
+    color=plotcolor(model_name))
     
     # Get variance across ensembles
     X_var = X_ml.var(axis=0)
@@ -125,10 +133,10 @@ for X_ml, model_name in zip(X_mls, model_names):
     X_var = X_var.mean(axis=(0, 2))   
     X_std = np.sqrt(X_var) 
     axs.plot(time[0:nt], X_std, 
-    label=labels[model_name]+" STD", 
+    label=label_name+" STD", 
     linestyle="dashed",
     alpha=0.8,
-    color=colors[model_name])
+    color=plotcolor(model_name))
 axs.axis(xmin=0, xmax=6)
 axs.legend(loc="lower right")
 #axs.set_ylabel(f"")

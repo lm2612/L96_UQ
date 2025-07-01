@@ -67,7 +67,7 @@ def bayesian_train(params, training_params, model_name, model, guide):
     min_loss = 1E8
 
     pyro.clear_param_store()
-    num_iterations = 6000 
+    num_iterations = 3000 
 
     for iteration in range(num_iterations):
         # calculate the loss and take a gradient step
@@ -173,14 +173,14 @@ if __name__ == "__main__":
                        'batch_size':128,
                        'N_timesteps':1}
     N_train = training_params['N_train']
+    
     seed = 123
     np.random.seed(seed)
 
-    model_name =  f"BayesianNN_multivariatefull_16_N{N_train}"      # Choose LinearRegression or NN 
+    model_name =  f"BayesianNN_multivariatefull_32_N{N_train}"      # Choose LinearRegression or NN 
 
     # Define model and guide
-    model = BayesianNN(1, 1, [16, 16])
-        
+    model = BayesianNN(1, 1, [32, 32])
 
     # Guide
     #guide = AutoDiagonalNormal(model)
@@ -188,4 +188,3 @@ if __name__ == "__main__":
     guide = AutoMultivariateNormal(model)
 
     bayesian_train(params, training_params, model_name, model, guide)
-

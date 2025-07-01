@@ -8,7 +8,7 @@ from ml_models.TorchModels import LinearRegression, NN
 from L96.L96_model import L96OneLayerParam
 from utils.kde_plot import kde_plot
 
-from plot_dicts import colors, labels
+from plot_dicts import colors, labels, plotcolor
 
 
 # Get paths
@@ -32,16 +32,29 @@ np.random.seed(seed)
 # models to plot
 N_train = 50
 model_names =  [ 
-    f"BayesianNN_2layer_N{N_train}/both_", 
-f"BayesianNN_2layer_N{N_train}/epistemic_",
-f"BayesianNN_2layer_N{N_train}/aleatoric_",
-#f"BayesianNN_2layer_N{N_train}/deterministic_",
+    #f"BayesianNN_2layer_N{N_train}/both_", 
+   #f"BayesianNN_2layer_N{N_train}/both_",
+    #f"NN_2layer_regime0_N{N_train}/longrun_",
+    #f"BayesianNN_2layer_N{N_train}/aleatoric_AR1_",
+        #f"BayesianNN_2layer_N{N_train}/epistemic_",
+        
+        f"BayesianNN_multivariatefull_small_N{N_train}/both_",
+         f"BayesianNN_multivariatefull_small_N{N_train}/epistemic_",
+        #f"BayesianNN_multivariatefull_small_N{N_train}/aleatoric_",
+
+##f"BayesianNN_2layer_N{N_train}/deterministic_",
 #f"AleatoricNN_2layer_N{N_train}/deterministic_",
 #f"DropoutNN_2layer_N{N_train}/deterministic_",
 #f"NN_2layer_N{N_train}/",
 #f"AleatoricNN_2layer_N{N_train}/"
 #f"DropoutNN_2layer_N{N_train}/"
 ]      # Choose LinearRegression or NN 
+
+label_names = [ 
+ "Both",
+ "Epistemic",
+"Aleatoric"
+]
 
 # Set up directory
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
@@ -54,6 +67,7 @@ else:
     if not os.path.exists(plot_path):
         os.makedirs(plot_path)
 
+plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
 # Load truth data
 X_truth = np.load(f"{data_path}/truth/X_dtf.npy")
 
@@ -92,37 +106,39 @@ j = 3
 init_conds = [0, 4, 25, 
             31, 36, 46, 
             57, 86, 99 ]
-init_conds = [0, 1, 2]
+init_conds = [0, 1, 2, 3] #, 1, 2, 3]
 for ii, i in enumerate(init_conds):
+    print(ii, i)
     axs[ii].plot(time[0:nt], X_truth[i*nt:(i+1)*nt, j],
         label="Truth", 
         alpha=1.,
-        color=colors["Truth"])
-    for X_ml, model_name in zip(X_mls, model_names):
+        color=plotcolor("Truth"))
+    for X_ml, model_name, label_name in zip(X_mls, model_names, label_names):
         n_ens = X_ml.shape[0]
         if n_ens > 1:
             for n in range(n_ens):
                 axs[ii].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, j],
                 #label=labels[model_name] if n==0 else None, 
                 alpha=0.1 if n_ens > 20 else 0.5,
-                color=colors[model_name])
+                color=plotcolor(model_name))
         if n_ens > 1:
             axs[ii].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, j].mean(axis=0),
-                label=labels[model_name], 
-                alpha=0.5,
-                color=colors[model_name])
+                label=label_name, 
+                alpha=0.8, lw=2,
+                color=plotcolor(model_name))
         if n_ens == 1:
             axs[ii].plot(time[0:nt], X_ml[0, i*nt:(i+1)*nt, j],
-                label=labels[model_name], 
+                label=label_name, 
                 alpha=0.9,
-                color=colors[model_name])
+                color=plotcolor(model_name))
         
-    axs[ii].axis(xmin=0, xmax=3)
+    axs[ii].axis(xmin=0, xmax=2.)
     if  len(model_names) > 1:  
         axs[ii].legend(loc="upper left")
     axs[ii].set_ylabel(f"X_{j}")
     axs[ii].set_xlabel("Time")
     axs[ii].set_title(f"Example {ii}")
+    axs[ii].legend(loc="upper left")
 plt.tight_layout()
 plt.savefig(f"{plot_path}X_ens_timeseries_examples.png")
 

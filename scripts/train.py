@@ -152,9 +152,9 @@ if __name__ == "__main__":
     N_train = training_params['N_train']
     seeds = range(100, 101) #, 150)
     for seed in seeds:
-        model_name =  f"NN_2layer_N{N_train}"      # Choose LinearRegression or NN 
+        model_name =  f"NN_16_N{N_train}"      # Choose LinearRegression or NN 
         np.random.seed(seed)
-        model = NN(1, 1, [32, 32]) #, dropout_rate=0.5)
+        model = NN(1, 1, [16, 16]) #, dropout_rate=0.5)
         total_params = sum(p.numel() for p in model.parameters())
         print("TOTAL PARAMS: ", total_params)
         train(params, training_params, model_name, model)

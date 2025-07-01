@@ -6,7 +6,12 @@ setup(
     packages=find_packages(),
     install_requires=[
         "numpy",
-        #"torch"
+        "torch==2.3.1",
+        "pyro-ppl",
+        "matplotlib",
+        "scipy",
+        "xarray",
+        "scikit-learn",
         # add other dependencies
     ],
     extras_require={

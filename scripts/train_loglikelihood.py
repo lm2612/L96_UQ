@@ -23,8 +23,8 @@ dt_f = 0.05
 seed = 123
 np.random.seed(seed)
 
-N_train = 100
-model_name =  f"AleatoricNN_2layer_N{N_train}"      # Choose LinearRegression or NN 
+N_train = 50
+model_name =  f"AleatoricExpNN_2layer_N{N_train}"      # Choose LinearRegression or NN 
 model = NN(1, 2, [32, 32])
 total_params = sum(p.numel() for p in model.parameters())
 
@@ -64,25 +64,29 @@ Y_torch = torch.tensor(targets, dtype=torch.float32).reshape((-1, 1))
 
 X_val = torch.tensor(features_val, dtype=torch.float32).reshape((-1, 1))
 Y_val = torch.tensor(targets_val, dtype=torch.float32).reshape((-1, 1))
-
+if N_train > 900:
+    X_val = X_torch
+    Y_val = Y_torch
 # Optimisation settings
 optimiser = torch.optim.Adam(params = model.parameters(), lr=1e-2)
 loss_function = torch.nn.GaussianNLLLoss(eps=1e-4)
 
-num_iterations=500
+num_iterations=1000
 losses = []
 losses_val = []
-min_loss = 1E8
+min_loss = 1E18
 
 for iteration in range(num_iterations):
     model.train()
     optimiser.zero_grad()
     pred = model(X_torch)
     # Split into mean and variance
-    mean, std = pred.chunk(2, dim=-1)
+    mean, s = pred.chunk(2, dim=-1)
     # Apply activation function to enforce positive variance
-    std = model.activation_function(std)
-    loss = loss_function(mean, Y_torch, std**2)
+    # s = log(sigma^2) --> sigma2 = exp(s)
+
+    #std = model.activation_function(std)
+    loss = loss_function(mean, Y_torch, torch.exp(s)) ## std**2))
     loss.backward()
 
     losses.append(loss.item())
@@ -93,10 +97,11 @@ for iteration in range(num_iterations):
     # validation
     model.eval()
     pred = model(X_val)
-    mean, std = pred.chunk(2, dim=-1)
+    mean, s = pred.chunk(2, dim=-1)
     # Apply activation function to enforce positive variance
-    std = model.activation_function(std)
-    loss = loss_function(mean, Y_val, std**2)
+    #std = model.activation_function(std)
+    #loss = loss_function(mean, Y_val, std**2)
+    loss = loss_function(mean, Y_val, torch.exp(s))
     losses_val.append(loss.item())
 
     if loss < min_loss:
@@ -163,5 +168,6 @@ plt.ylabel("Parameterisation output")
 plt.title("2-layer NN")
 
 plt.savefig(f"{save_model_path}/input_outputs_NN.png")
+print(f"{save_model_path}/input_outputs_NN.png")
 print("Plots done")
 

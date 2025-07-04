@@ -3,11 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
+from torch.utils.data import TensorDataset, DataLoader
 
 import pyro
 import pyro.distributions as dist
 from pyro.nn import PyroModule, PyroSample
-from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, AutoLowRankMultivariateNormal
+from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, AutoLowRankMultivariateNormal, AutoGaussian
 from pyro.infer import SVI, Trace_ELBO, Predictive
 from pyro.optim import Adam
 
@@ -17,9 +18,9 @@ from utils.summary_stats import summary_stats
 
 def bayesian_train(params, training_params, model_name, model, guide):
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
-    dt, dt_f = params['dt'], params['dt_f']
+    dt, dt_f,  = params['dt'], params['dt_f']
     N_train = training_params['N_train']
-    batch_size = training_params['batch_size']
+    batch_size, lr, num_iterations = training_params['batch_size'],  training_params['lr'],  training_params['num_iterations']
 
     
     # Set up directory
@@ -57,36 +58,43 @@ def bayesian_train(params, training_params, model_name, model, guide):
     X_val = torch.tensor(features_val, dtype=torch.float32).reshape((-1, 1))
     Y_val = torch.tensor(targets_val, dtype=torch.float32).reshape((-1, 1))
 
+    if X_torch.shape[0] > batch_size:
+        batch_size = X_torch.shape[0]
+    
+    dataset = TensorDataset(X_torch, Y_torch)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
     # Optimisation settings
-    adam = pyro.optim.Adam({"lr": 0.003})
+    adam = pyro.optim.Adam({"lr": lr})
     svi = SVI(model, guide, adam, loss=Trace_ELBO())
 
-    num_iterations=5000
     losses = []
     losses_val = []
     min_loss = 1E8
 
     pyro.clear_param_store()
-    num_iterations = 3000 
 
     for iteration in range(num_iterations):
-        # calculate the loss and take a gradient step
-        loss = svi.step(X_torch, Y_torch)
-        losses.append(loss)
+        for X_batch, Y_batch in dataloader:
+            # calculate the loss and take a gradient step
+            loss = svi.step(X_batch, Y_batch)
+            losses.append(loss)
+
+            if loss < min_loss:
+                # Save checkpoint
+                output_dicts = {
+                    "iteration": iteration,
+                    "train_loss": losses[-1],
+                    "model": model,
+                    "guide":guide}
+
+                torch.save(output_dicts, f"{save_model_path}/model_best.pt")
+                pyro.get_param_store().save( f"{save_model_path}/pyro_best_params.pt")
+                min_loss = loss
+        
         if iteration % 100 == 0:
             print("[iteration %04d] loss: %.4f" % (iteration + 1, loss ))
 
-        if loss < min_loss:
-            # Save checkpoint
-            output_dicts = {
-                "iteration": iteration,
-                "train_loss": losses[-1],
-                "model": model,
-                "guide":guide}
-
-            torch.save(output_dicts, f"{save_model_path}/model_best.pt")
-            pyro.get_param_store().save( f"{save_model_path}/pyro_best_params.pt")
-            min_loss = loss
 
     print("Done training")
 
@@ -118,7 +126,7 @@ def bayesian_train(params, training_params, model_name, model, guide):
     plt.clf()
     figure, ax = plt.subplots(1)
     X_domain = torch.linspace(-15, 20., 100).unsqueeze(-1)
-    pred = model(X_domain).detach()
+    #pred = model(X_domain).detach()
 
     # Plot
     plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
@@ -171,13 +179,17 @@ if __name__ == "__main__":
     }
     training_params = {'N_train': 50, 
                        'batch_size':128,
-                       'N_timesteps':1}
+                       'N_timesteps':1,
+                       'lr': 0.002,
+                       'num_iterations' : 10000 ,
+}
     N_train = training_params['N_train']
     
     seed = 123
     np.random.seed(seed)
+    torch.manual_seed(seed)
 
-    model_name =  f"BayesianNN_multivariatefull_32_N{N_train}"      # Choose LinearRegression or NN 
+    model_name =  f"BayesianNN_gaussian_32_N{N_train}"      # Choose LinearRegression or NN 
 
     # Define model and guide
     model = BayesianNN(1, 1, [32, 32])
@@ -185,6 +197,6 @@ if __name__ == "__main__":
     # Guide
     #guide = AutoDiagonalNormal(model)
     guide = AutoLowRankMultivariateNormal(model)
-    guide = AutoMultivariateNormal(model)
+    guide = AutoGaussian(model)
 
     bayesian_train(params, training_params, model_name, model, guide)

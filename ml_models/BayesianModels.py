@@ -5,7 +5,7 @@ import pyro
 import pyro.distributions as dist
 from pyro.nn import PyroModule, PyroSample
 
-from TorchModels import LinearRegression, NN
+from ml_models.TorchModels import LinearRegression, NN
 
 class BayesianLinearRegression(PyroModule):
     """Bayesian linear regression"""
@@ -26,7 +26,7 @@ class BayesianLinearRegression(PyroModule):
         return mean
 
     def get_fixed_param(self, guide):
-         """Returns a NN torch module in same format as this model but with parameters fixed based on guide 
+        """Returns a NN torch module in same format as this model but with parameters fixed based on guide 
         dictionary"""
         return LinearRegression(self.n_features, self.n_targets, param_dict = param_dict)
 

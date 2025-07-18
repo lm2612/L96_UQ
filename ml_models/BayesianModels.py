@@ -30,6 +30,13 @@ class BayesianLinearRegression(PyroModule):
         dictionary"""
         return LinearRegression(self.n_features, self.n_targets, param_dict = param_dict)
 
+    def sample_obs(self, mean):
+        """Sample aleatoric noise (e.g., if using deterministic pred w/ fixed parameters)"""
+        sigma = pyro.param("sigma", dist.Uniform(1.0e-6, 10.))
+        with pyro.plate("data", mean.shape[0]):
+            obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1))
+        return obs
+
 class BayesianNN(PyroModule):
     """Bayesian neural network with arbitrary number of hidden layers - can be used for epistemic uncertainty (_RETURN) or both
     aleatoric and epistemic (obs)"""
@@ -65,3 +72,10 @@ class BayesianNN(PyroModule):
         """Returns a NN torch module in same format as this model but with parameters fixed based on guide 
         dictionary"""
         return NN(self.n_features, self.n_targets, self.n_hidden, param_dict = param_dict)
+
+    def sample_obs(self, mean):
+        """Sample aleatoric noise (e.g., if using deterministic pred w/ fixed parameters)"""
+        sigma = pyro.param("sigma", dist.Uniform(1.0e-6, 10.))
+        with pyro.plate("data", mean.shape[0]):
+            obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1))
+        return obs

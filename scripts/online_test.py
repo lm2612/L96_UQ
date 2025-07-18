@@ -14,7 +14,9 @@ from ml_models.BayesianModels import BayesianNN, BayesianLinearRegression, NewBN
 from L96.L96_model import L96OneLayerParam
 
 def test(params, test_params, param_func):
-    """
+    """Function that does online test and saves output
+    Args:
+    - params
     """
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']

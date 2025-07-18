@@ -11,25 +11,35 @@ class LinearRegression(torch.nn.Module):
         return self.linear(X)
 
 class NN(torch.nn.Module):
-    """Simple feedforward neural network with two hidden layers"""
-    def __init__(self, n_features=1, n_targets=1, n_hidden = [32, 32]):
+    """Neural Network with arbitrary number of layers."""
+    def __init__(self, n_features=1, n_targets=1, n_hidden=[16], param_dict = None):
+        """Args:
+        param_dict (optional) dictionary of weights and biases that must follow size of NN requested
+        e.g., to get param_dict from a guide, you can do param_dict = guide.median() or guide()"""
         super().__init__()
         self.n_features = n_features
         self.n_targets = n_targets
+        self.n_hidden = n_hidden
+        self.param_dict = param_dict
 
-        self.layer_input = torch.nn.Linear(self.n_features, n_hidden[0])         # Input layer: n_features -> 16
-        self.layer_hidden1 = torch.nn.Linear(n_hidden[0], n_hidden[1])           # Hidden layer 1: 16 -> 16
-        self.layer_hidden2 = torch.nn.Linear(n_hidden[1], self.n_targets)        # Hidden layer 2: 16 -> n_targets
+        nodes = [n_features]+n_hidden+[n_targets]
+
+        self.layers = torch.nn.ModuleList([])
+        for j in range(len(nodes)-1):
+            linear_j = torch.nn.Linear(nodes[j], nodes[j+1])
+            # If guide has been provided, we will set the weights and biases according to the guide values
+            if param_dict is not None:
+                linear_j.weight = torch.nn.parameter.Parameter(param_dict[f'layers.{j}.weight'])
+                linear_j.bias = torch.nn.parameter.Parameter(param_dict[f'layers.{j}.bias'])
+            self.layers.append(linear_j)
 
         self.activation_function = torch.nn.ReLU()
 
-    def forward(self, X):
-        output = self.layer_input(X)
-        output = self.activation_function(output)
-        output = self.layer_hidden1(output)
-        output = self.activation_function(output)
-        output = self.layer_hidden2(output)
-        return output
+    def forward(self, x):
+        for j in range(len(self.layers)-1):
+            x = self.layers[j](x)
+            x = self.activation_function(x)
+        return self.layers[-1](x)
 
 
 class NNDropout(torch.nn.Module):

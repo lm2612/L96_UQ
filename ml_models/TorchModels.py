@@ -3,10 +3,13 @@ import torch
 
 class LinearRegression(torch.nn.Module):
     """Linear regression"""
-    def __init__(self, n_features=1, n_targets=1):
+    def __init__(self, n_features=1, n_targets=1, param_dict = None):
         super().__init__()
         self.linear = torch.nn.Linear(n_features, n_targets)
-    
+        if param_dict is not None:
+            self.linear.weight = torch.nn.parameter.Parameter(param_dict['linear.weight'])
+            self.linear.bias = torch.nn.parameter.Parameter(param_dict['linear.bias'])
+            
     def forward(self, X):
         return self.linear(X)
 
@@ -35,11 +38,11 @@ class NN(torch.nn.Module):
 
         self.activation_function = torch.nn.ReLU()
 
-    def forward(self, x):
+    def forward(self, X):
         for j in range(len(self.layers)-1):
-            x = self.layers[j](x)
-            x = self.activation_function(x)
-        return self.layers[-1](x)
+            X = self.layers[j](X)
+            X = self.activation_function(X)
+        return self.layers[-1](X)
 
 
 class NNDropout(torch.nn.Module):

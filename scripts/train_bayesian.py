@@ -122,13 +122,20 @@ def bayesian_train(params, training_params, model_name, model, guide):
     plt.savefig(f"{save_model_path}/losses.png")
     print(f"{save_model_path}/losses.png")
 
-    # Plot and save result
+    print(model, guide)
+
+    # Plot and save best NN so far - first load these from saved file
+    output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+    model = output_dicts["model"]
+    guide = output_dicts["guide"]
+    pyro.get_param_store().load( f"{save_model_path}/pyro_best_params.pt")
+
+    # Set up plot
     plt.clf()
     figure, ax = plt.subplots(1)
     X_domain = torch.linspace(-15, 20., 100).unsqueeze(-1)
-    #pred = model(X_domain).detach()
 
-    # Plot
+    # Plot raw data
     plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
     plt.axis(ymin=-15., ymax=20.,xmin=-15., xmax=20.)
     plt.xticks(fontsize=18)
@@ -137,10 +144,11 @@ def bayesian_train(params, training_params, model_name, model, guide):
     plt.ylabel("$U$", fontsize=18)
     plt.tight_layout()
     plt.savefig(f"{save_model_path}/data.png")
+    print(f"{save_model_path}/data.png")
 
-
+    # Predictive 
     predictive = Predictive(model, guide=guide, num_samples=800,
-                            return_sites=("obs", "_RETURN", "sigma"))
+                            return_sites=("obs", "_RETURN"))
     samples = predictive(X_domain)
     pred_summary = summary_stats(samples)
 
@@ -158,7 +166,6 @@ def bayesian_train(params, training_params, model_name, model, guide):
 
     plt.xlabel("Parameterisation input")
     plt.ylabel("Parameterisation output")
-    plt.title("2-layer NN")
 
     plt.savefig(f"{save_model_path}/input_outputs_NN.png")
     print(f"{save_model_path}/input_outputs_NN.png")
@@ -189,14 +196,12 @@ if __name__ == "__main__":
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    model_name =  f"BayesianNN_gaussian_32_N{N_train}"      # Choose LinearRegression or NN 
+    model_name =  f"BayesianNN_N{N_train}"      # Choose LinearRegression or NN 
 
     # Define model and guide
-    model = BayesianNN(1, 1, [32, 32])
+    model = BayesianNN(1, 1, [16])
 
     # Guide
-    #guide = AutoDiagonalNormal(model)
-    guide = AutoLowRankMultivariateNormal(model)
-    guide = AutoGaussian(model)
+    guide = AutoMultivariateNormal(model)
 
     bayesian_train(params, training_params, model_name, model, guide)

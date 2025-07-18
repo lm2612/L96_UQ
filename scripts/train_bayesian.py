@@ -137,7 +137,7 @@ def bayesian_train(params, training_params, model_name, model, guide):
 
     # Plot raw data
     plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
-    plt.axis(ymin=-15., ymax=20.,xmin=-15., xmax=20.)
+    plt.axis(ymin=-20., ymax=20., xmin=-15., xmax=20.)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
     plt.xlabel("$X$", fontsize=18)
@@ -146,30 +146,48 @@ def bayesian_train(params, training_params, model_name, model, guide):
     plt.savefig(f"{save_model_path}/data.png")
     print(f"{save_model_path}/data.png")
 
+    # Deterministic prediction 
+    fixed_param_NN = model.get_fixed_param_NN(guide.median())
+    fixed_param_NN.eval()
+    det_pred = fixed_param_NN(X_domain).detach()
+    plt.plot(X_domain.squeeze(), det_pred.squeeze(), color="k", linewidth=2, label="mean")
+    plt.savefig(f"{save_model_path}/offline_deterministic.png")
+
     # Predictive 
-    predictive = Predictive(model, guide=guide, num_samples=800,
+    num_samples = 800
+    predictive = Predictive(model, guide=guide, num_samples=num_samples,
                             return_sites=("obs", "_RETURN"))
     samples = predictive(X_domain)
     pred_summary = summary_stats(samples)
 
-    plt.plot(X_domain.squeeze(), pred_summary["_RETURN"]["mean"].squeeze(), color="r", linewidth=2)
-
+    # Both
     plt.fill_between(X_domain.squeeze(), 
-                    pred_summary["obs"]["5%"].squeeze(), 
-                    pred_summary["obs"]["95%"].squeeze(),
-                    color="green", alpha=0.2)
+                 pred_summary["obs"]["5%"].squeeze(), 
+                 pred_summary["obs"]["95%"].squeeze(),
+                 color="dimgrey", alpha=0.2, label="both")
 
+    # Aleatoric only 
+    print(det_pred.shape)
+    aleatoric_samples = torch.zeros((num_samples, det_pred.shape[0]))
+    for n in range(num_samples):
+        aleatoric_samples[n, :] = model.sample_obs(det_pred).detach().squeeze()
+    std = torch.std(aleatoric_samples, dim=0)
     plt.fill_between(X_domain.squeeze(), 
-                    pred_summary["_RETURN"]["5%"].squeeze(), 
-                    pred_summary["_RETURN"]["95%"].squeeze(),
-                    color="purple", alpha=0.2)
+                det_pred.squeeze() - 2*std, 
+                det_pred.squeeze() + 2*std,
+                color="seagreen", alpha=0.4, label="aleatoric")
+    
+    # Epistemic only
+    plt.fill_between(X_domain.squeeze(), 
+                 pred_summary["_RETURN"]["5%"].squeeze(), 
+                 pred_summary["_RETURN"]["95%"].squeeze(),
+                 color="darkorchid", alpha=0.4, label="epistemic")
+    
+    plt.legend()
+    plt.axis(ymin=-18., ymax=22.,xmin=-18., xmax=22.)
 
-    plt.xlabel("Parameterisation input")
-    plt.ylabel("Parameterisation output")
-
-    plt.savefig(f"{save_model_path}/input_outputs_NN.png")
-    print(f"{save_model_path}/input_outputs_NN.png")
-
+    plt.savefig(f"{save_model_path}/input_outputs_NN_2sigma.png")
+    print(f"{save_model_path}/input_outputs_NN_2sigma.png")
     print("Plots done")
 
 
@@ -196,7 +214,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    model_name =  f"BayesianNN_N{N_train}"      # Choose LinearRegression or NN 
+    model_name =  f"BayesianNN_16_N{N_train}"      # Choose LinearRegression or NN 
 
     # Define model and guide
     model = BayesianNN(1, 1, [16])

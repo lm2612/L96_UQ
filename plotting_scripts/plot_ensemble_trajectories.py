@@ -30,22 +30,16 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="",
     X_truth = np.load(f"{data_path}/X_dtf.npy")
 
     # Load ml param model results
-    test_params = [np.load(f"{model_path}/{run_type}_test_params.npy", allow_pickle=True).item() for run_type in run_types]
     X_mls = [np.load(filename) for filename in filenames]
 
-    # Get info about simulation - number of init conds, time T, number of ensembles
-    N_init = min([test_param['N_init'] for test_param in test_params])
-    T =  min([test_param['T'] for test_param in test_params])
-    n_ens =  min([test_param['n_ens'] for test_param in test_params])
-
-    print(T, X_truth.shape,[X_ml.shape for X_ml in X_mls])
-    time = np.arange(0, T, dt_f)
-    print(time.shape)
-
-    # Separation timescales
+    # For all plots, time separation assumed to be 10
+    T = 10
     nt = int(T/dt_f)
-    print(f"Initial conditions separated by {nt} time units")
-    X_init_conds = X_truth[::nt]
+    N_init = X_mls[0].shape[1] // nt
+    time = np.arange(0, T, dt_f)
+
+    print(f"{N_init} initial conditions separated by {nt} time units")
+    X_init_conds = X_truth[0:N_init:nt]
 
     for i in range(N_init):
         print(f"Plotting initial condition {i}")

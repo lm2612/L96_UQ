@@ -40,87 +40,73 @@ save_prefix = "whitenoise_"
 
 # Set up directories
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
-truth_path = f'{data_path}/'
-filenames = [f'{data_path}/{model_name}/{run_type}_X_dtf.npy' for run_type in run_types]
+model_path = f'{data_path}/{model_name}/'
+filenames = [f'{model_path}/{run_type}_X_dtf.npy' for run_type in run_types]
 print(filenames)
 
-plot_path = f'{data_path}/{model_name}/plots/'
+plot_path = f'{model_path}/plots/'
 if not os.path.exists(plot_path):
     os.makedirs(plot_path)
 
 # Load truth data
-X_truth = np.load(f"{truth_path}/X_dtf.npy")
+X_truth = np.load(f"{data_path}/X_dtf.npy")
 
 # Load ml param model results
+test_params = [np.load(f"{model_path}/{run_type}_test_params.npy", allow_pickle=True).item() for run_type in run_types]
 X_mls = [np.load(filename) for filename in filenames]
 
-# Get shapes
-T = np.ceil(X_truth.shape[0] * dt_f)
+# Get info about simulation - number of init conds, time T, number of ensembles
+N_init = min([test_param['N_init'] for test_param in test_params])
+T =  min([test_param['T'] for test_param in test_params])
+n_ens =  min([test_param['n_ens'] for test_param in test_params])
+
 print(T, X_truth.shape,[X_ml.shape for X_ml in X_mls])
 time = np.arange(0, T, dt_f)
 print(time.shape)
 
-
 # Separation timescales
-T = 10
-sep = int(T/dt_f)
-print(f"Initial conditions separated by {sep} time units")
-X_init_conds = X_truth[::sep]
-N_init = X_init_conds.shape[0]
-nt_total = X_truth.shape[0]
-
-# Check 
 nt = int(T/dt_f)
-assert(N_init * nt == nt_total)
-print(N_init, nt)
+print(f"Initial conditions separated by {nt} time units")
+X_init_conds = X_truth[::nt]
 
-# Plot
-plt.clf()
-fig, axs = plt.subplots(3, 3, figsize=(20, 12)) #, sharex=True)
-axs = axs.flatten()
-
-# Choose 9 different initial conditions spaced out
-# Fix j
-j = 3
-
-init_conds = [0, 4, 25, 
-            31, 36, 46, 
-            57, 86, 99 ]
-init_conds = [0] #, 2, 3] #, 1, 2, 3]
-for ii, i in enumerate(init_conds):
-    print(ii, i)
-    axs[ii].plot(time[0:nt], X_truth[i*nt:(i+1)*nt, j],
+for i in range(N_init):
+    print(f"Plotting initial condition {i}")
+    
+    plt.clf()
+    fig, axs = plt.subplots(4, 2, figsize=(14, 12)) 
+    axs = axs.flatten()
+    for j in range(8):
+        axs[j].plot(time[0:nt], X_truth[i*nt:(i+1)*nt, j],
         label="Truth", 
         alpha=1.,
         color=plotcolor("Truth"))
-    for X_ml, run_type, label_name in zip(X_mls, run_types, label_names):
-        n_ens = X_ml.shape[0]
-        if n_ens > 1:
-            for n in range(n_ens):
-                axs[ii].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, j],
-                #label=labels[model_name] if n==0 else None, 
-                alpha=0.1 if n_ens > 20 else 0.5,
-                color=plotcolor(run_type))
-        if n_ens > 1:
-            axs[ii].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, j].mean(axis=0),
-                label=label_name, 
-                alpha=0.8, lw=2,
-                color=plotcolor(run_type))
-        if n_ens == 1:
-            axs[ii].plot(time[0:nt], X_ml[0, i*nt:(i+1)*nt, j],
-                label=label_name, 
-                alpha=0.9,
-                color=plotcolor(run_type))
-        
-    axs[ii].axis(xmin=0, xmax=2., ymin = -10., ymax=16.)
-    axs[ii].legend(loc="upper left")
-    axs[ii].set_ylabel(f"X_{j}")
-    axs[ii].set_xlabel("Time")
-    axs[ii].set_title(f"Example {ii}")
-    axs[ii].legend(loc="upper left")
-plt.tight_layout()
-plt.savefig(f"{plot_path}{save_prefix}X_ens_timeseries_examples.png")
+        for X_ml, run_type, label_name in zip(X_mls, run_types, label_names):
+            n_ens = X_ml.shape[0]
+            if n_ens > 1:
+                for n in range(n_ens):
+                    axs[j].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, j],
+                    #label=labels[model_name] if n==0 else None, 
+                    alpha=0.1 if n_ens > 20 else 0.5,
+                    color=plotcolor(run_type))
+            if n_ens > 1:
+                axs[j].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, j].mean(axis=0),
+                    label=label_name, 
+                    alpha=0.8, lw=2,
+                    color=plotcolor(run_type))
+            if n_ens == 1:
+                axs[j].plot(time[0:nt], X_ml[0, i*nt:(i+1)*nt, j],
+                    label=label_name, 
+                    alpha=0.9,
+                    color=plotcolor(run_type))
+        axs[j].axis(xmin=0, xmax=2., ymin = -10., ymax=16.)
+        axs[j].legend(loc="upper left")
+        axs[j].set_ylabel(f"X_{j}")
+        axs[j].set_xlabel("Time")
+        axs[j].set_title(f"Initial Condition {i}")
+        axs[j].legend(loc="upper left")
+    plt.tight_layout()
+    plt.savefig(f"{plot_path}{save_prefix}ensemble_timeseries_{i}.png")
+    print(f"Saved as {plot_path}{save_prefix}ensemble_timeseries_{i}.png")
+    plt.close()
 
-print(f"Saved to {plot_path}{save_prefix}X_ens_timeseries_examples.png")
-plt.close()
-
+    

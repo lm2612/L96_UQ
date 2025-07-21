@@ -8,7 +8,7 @@ from ml_models.TorchModels import LinearRegression, NN
 from L96.L96_model import L96OneLayerParam
 from utils.kde_plot import kde_plot
 
-from plot_dicts import plotcolor
+from plotting_scripts.plot_dicts import plotcolor
 
 
 def plot_distributions(params, model_name, run_types, label_names, save_prefix=""):

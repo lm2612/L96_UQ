@@ -8,7 +8,7 @@ from ml_models.TorchModels import LinearRegression, NN
 from L96.L96_model import L96OneLayerParam
 from utils.kde_plot import kde_plot
 
-from plot_dicts import plotcolor
+from plotting_scripts.plot_dicts import plotcolor
 
 def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", 
         shading=True, spaghetti=False):
@@ -67,7 +67,7 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="",
                         mean_X - std_dev, 
                         mean_X + std_dev ,
                         alpha=0.2,
-                        color=plotcolor(model_name))
+                        color=plotcolor(run_type))
                 if spaghetti:
                     for n in range(n_ens):
                         axs[k].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, k],

@@ -18,7 +18,7 @@ J = 32
 
 # Define the "true" parameters
 h = 1
-F = 20  # 8
+F = 20  
 c = 10
 b = 10
 
@@ -29,52 +29,32 @@ seed = 123
 np.random.seed(seed)
 
 
-# models to plot
+# Set up model and types of simulations to plot
 N_train = 50
-model_names =  [ 
-    #f"BayesianNN_2layer_N{N_train}/both_", 
-   #f"BayesianNN_2layer_N{N_train}/both_",
-    #f"NN_2layer_regime0_N{N_train}/longrun_",
-    #f"BayesianNN_2layer_N{N_train}/aleatoric_AR1_",
-        #f"BayesianNN_2layer_N{N_train}/epistemic_",
-        
-        f"BayesianNN_multivariatefull_small_N{N_train}/both_",
-         f"BayesianNN_multivariatefull_small_N{N_train}/epistemic_",
-        #f"BayesianNN_multivariatefull_small_N{N_train}/aleatoric_",
+model_name = f"BayesianNN_16_N{N_train}"
+run_types = ["epistemic", "aleatoric", "both"] # Or run_types = ["epistemic_fix", "aleatoric_AR1_", ...]
+colors = ["darkorchid", "seagreen", "dimgrey"]
+label_names = [ "Epistemic", "Aleatoric", "Both"]
+save_prefix = "whitenoise_"
 
-##f"BayesianNN_2layer_N{N_train}/deterministic_",
-#f"AleatoricNN_2layer_N{N_train}/deterministic_",
-#f"DropoutNN_2layer_N{N_train}/deterministic_",
-#f"NN_2layer_N{N_train}/",
-#f"AleatoricNN_2layer_N{N_train}/"
-#f"DropoutNN_2layer_N{N_train}/"
-]      # Choose LinearRegression or NN 
 
-label_names = [ 
- "Both",
- "Epistemic",
-"Aleatoric"
-]
-
-# Set up directory
+# Set up directories
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
-save_model_paths = [f'{data_path}/{model_name}' for model_name in model_names]
-truth_path = f'{data_path}/truth/'
-if len(model_names) == 1:
-    plot_path = save_model_paths[0]
-else:
-    plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
-    if not os.path.exists(plot_path):
-        os.makedirs(plot_path)
+truth_path = f'{data_path}/'
+filenames = [f'{data_path}/{model_name}/{run_type}_X_dtf.npy' for run_type in run_types]
+print(filenames)
 
-plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
+plot_path = f'{data_path}/{model_name}/plots/'
+if not os.path.exists(plot_path):
+    os.makedirs(plot_path)
+
 # Load truth data
-X_truth = np.load(f"{data_path}/truth/X_dtf.npy")
+X_truth = np.load(f"{truth_path}/X_dtf.npy")
 
 # Load ml param model results
-X_mls = [np.load(f"{save_model_path}X_dtf.npy") for save_model_path in save_model_paths]
+X_mls = [np.load(filename) for filename in filenames]
 
-
+# Get shapes
 T = np.ceil(X_truth.shape[0] * dt_f)
 print(T, X_truth.shape,[X_ml.shape for X_ml in X_mls])
 time = np.arange(0, T, dt_f)
@@ -92,7 +72,7 @@ nt_total = X_truth.shape[0]
 # Check 
 nt = int(T/dt_f)
 assert(N_init * nt == nt_total)
-
+print(N_init, nt)
 
 # Plot
 plt.clf()
@@ -106,42 +86,41 @@ j = 3
 init_conds = [0, 4, 25, 
             31, 36, 46, 
             57, 86, 99 ]
-init_conds = [0, 1, 2, 3] #, 1, 2, 3]
+init_conds = [0] #, 2, 3] #, 1, 2, 3]
 for ii, i in enumerate(init_conds):
     print(ii, i)
     axs[ii].plot(time[0:nt], X_truth[i*nt:(i+1)*nt, j],
         label="Truth", 
         alpha=1.,
         color=plotcolor("Truth"))
-    for X_ml, model_name, label_name in zip(X_mls, model_names, label_names):
+    for X_ml, run_type, label_name in zip(X_mls, run_types, label_names):
         n_ens = X_ml.shape[0]
         if n_ens > 1:
             for n in range(n_ens):
                 axs[ii].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, j],
                 #label=labels[model_name] if n==0 else None, 
                 alpha=0.1 if n_ens > 20 else 0.5,
-                color=plotcolor(model_name))
+                color=plotcolor(run_type))
         if n_ens > 1:
             axs[ii].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, j].mean(axis=0),
                 label=label_name, 
                 alpha=0.8, lw=2,
-                color=plotcolor(model_name))
+                color=plotcolor(run_type))
         if n_ens == 1:
             axs[ii].plot(time[0:nt], X_ml[0, i*nt:(i+1)*nt, j],
                 label=label_name, 
                 alpha=0.9,
-                color=plotcolor(model_name))
+                color=plotcolor(run_type))
         
-    axs[ii].axis(xmin=0, xmax=2.)
-    if  len(model_names) > 1:  
-        axs[ii].legend(loc="upper left")
+    axs[ii].axis(xmin=0, xmax=2., ymin = -10., ymax=16.)
+    axs[ii].legend(loc="upper left")
     axs[ii].set_ylabel(f"X_{j}")
     axs[ii].set_xlabel("Time")
     axs[ii].set_title(f"Example {ii}")
     axs[ii].legend(loc="upper left")
 plt.tight_layout()
-plt.savefig(f"{plot_path}X_ens_timeseries_examples.png")
+plt.savefig(f"{plot_path}{save_prefix}X_ens_timeseries_examples.png")
 
-print(f"Saved to {plot_path}X_ens_timeseries_examples.png")
+print(f"Saved to {plot_path}{save_prefix}X_ens_timeseries_examples.png")
 plt.close()
 

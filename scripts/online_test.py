@@ -9,11 +9,11 @@ import pyro
 from pyro.infer import Predictive
 
 from ml_models.TorchModels import LinearRegression, NN
-from ml_models.BayesianModels import BayesianNN, BayesianLinearRegression, NewBNN, FixedParamNN, FixedParamLinearRegression, FixedNewBNN
+from ml_models.BayesianModels import BayesianNN, BayesianLinearRegression
 
 from L96.L96_model import L96OneLayerParam
 
-def test(params, test_params, param_func):
+def test(params, test_params, param_func, param_sample=None):
     """Function that does online test and saves output
     Args:
     - params
@@ -47,17 +47,18 @@ def test(params, test_params, param_func):
     # How often to save (for very long runs, may want to save every 10 timesteps or so, default is every timestep nt_save=1)
     nt_save = nt_total//save_step
 
-    #TODO: Tmax e.g., restart the run every 1000 MTU to avoid memory issues]?
-
     # Run each model for 10MTU
     X_all = np.zeros((n_ens, nt_save, K))
     U_all = np.zeros((n_ens, nt_save, K))
     t=0
     
-    for i in range(N_init):
-        print(f"Initial condition {i}")
-        # Repeat for n_ens ensemble members (n_ens = 1 if deterministic)
-        for n in range(n_ens):
+    # Repeat for n_ens ensemble members
+    for n in range(n_ens):
+        print(f"Ensemble member {n}")
+        # If running fixed parameters for epistemic uncertainty, sample parameters 
+        if param_sample is not None:
+            param_sample()
+        for i in range(N_init):
             # Initialize model
             l96_model = L96OneLayerParam(X_0=X_init_conds[i], 
                                         param_func=param_func, 
@@ -73,6 +74,8 @@ def test(params, test_params, param_func):
     # Save results
     np.save(f"{save_model_path}/{save_prefix}X_dtf.npy", X_all)
     np.save(f"{save_model_path}/{save_prefix}U_dtf.npy", U_all)
+    # Save meta data about run 
+    np.save(f"{save_model_path}/{save_prefix}test_params.npy", test_params, allow_pickle=True)
 
     print(f"Done. Saved to {save_model_path}/{save_prefix}X_dtf.npy")
 
@@ -92,13 +95,13 @@ if __name__ == "__main__":
                     'runtype': None,
                     'save_model_path':'',
                     'save_prefix':'',
-                    'n_ens': 10,
-                    'N_init': 1,
+                    'n_ens': 50,
+                    'N_init': 50,
                     'save_step': 1,
                     'T':10 ,
                     'F':20                  }
 
-    model_name =  f"BayesianNN_2layer_N100" 
+    model_name =  f"BayesianNN_16_N50" 
     model_path = f"./data/K{params['K']}_J{params['J']}_h{params['h']}_c{params['c']}_b{params['b']}_F{params['F']}/{model_name}/"
     test_params['save_model_path'] = model_path
 
@@ -109,7 +112,6 @@ if __name__ == "__main__":
     guide = output_dicts["guide"]
     predictive = Predictive(pyro_model, guide=guide, num_samples=1, return_sites=("_RETURN", "obs"))
 
-
     # Run Epistemic with white noise
     def param_func(x):
         out = predictive(x.unsqueeze(-1))["_RETURN"]
@@ -119,11 +121,14 @@ if __name__ == "__main__":
     test(params, test_params, param_func)
 
     # Run Aleatoric with white noise
-    fixed_param_NN = FixedParamNN(pyro_model, guide.median())
+    sigma = pyro.get_param_store()['sigma']
+        
+    fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())
     fixed_param_NN.eval()
     def param_func(x):
         with torch.no_grad():
-            out = fixed_param_NN(x.unsqueeze(-1))
+            mean = fixed_param_NN(x.unsqueeze(-1))
+            out = pyro_model.sample_obs(mean)
         return out.squeeze()
 
     test_params['runtype'] = 'aleatoric'

@@ -10,7 +10,9 @@ from utils.kde_plot import kde_plot
 
 from plot_dicts import plotcolor
 
-def plot_ensembles(params, model_name, run_types, label_names, save_prefix=""):
+def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", 
+        shading=True, spaghetti=False):
+    """Plots ensembles - either shading for 1 std or spaghetti plot of each ensemble member"""
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
 
@@ -58,22 +60,25 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix=""):
             color=plotcolor("Truth"))
             for X_ml, run_type, label_name in zip(X_mls, run_types, label_names):
                 n_ens = X_ml.shape[0]
-                if n_ens > 1:
+                if shading:
+                    mean_X = X_ml[:, i*nt:(i+1)*nt, k].mean(axis=0)
+                    std_dev = X_ml[:, i*nt:(i+1)*nt, k].std(axis=0)
+                    axs[k].fill_between(time[0:nt], 
+                        mean_X - std_dev, 
+                        mean_X + std_dev ,
+                        alpha=0.2,
+                        color=plotcolor(model_name))
+                if spaghetti:
                     for n in range(n_ens):
                         axs[k].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, k],
-                        #label=labels[model_name] if n==0 else None, 
-                        alpha=0.1 if n_ens > 20 else 0.5,
+                        alpha=0.4,
                         color=plotcolor(run_type))
-                if n_ens > 1:
-                    axs[k].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, k].mean(axis=0),
-                        label=label_name, 
-                        alpha=0.8, lw=2,
-                        color=plotcolor(run_type))
-                if n_ens == 1:
-                    axs[k].plot(time[0:nt], X_ml[0, i*nt:(i+1)*nt, k],
-                        label=label_name, 
-                        alpha=0.9,
-                        color=plotcolor(run_type))
+                # Plot mean (regardless of type of plot)
+                axs[k].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, k].mean(axis=0),
+                    label=label_name, 
+                    alpha=0.8, lw=2,
+                    color=plotcolor(run_type))
+                
             axs[k].axis(xmin=0, xmax=2., ymin = -10., ymax=16.)
             axs[k].legend(loc="upper left")
             axs[k].set_ylabel(f"X_{k}")

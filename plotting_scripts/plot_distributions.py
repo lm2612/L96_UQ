@@ -26,13 +26,10 @@ def plot_distributions(params, model_name, run_types, label_names, save_prefix="
     if not os.path.exists(plot_path):
         os.makedirs(plot_path)
 
-
-
     # Load truth data
     X_truth = np.load(f"{data_path}/X_dtf.npy")
 
     # Load ml param model results
-    test_params = [np.load(f"{model_path}/{run_type}_test_params.npy", allow_pickle=True).item() for run_type in run_types]
     X_mls = [np.load(filename) for filename in filenames]
 
     # Plot distributions

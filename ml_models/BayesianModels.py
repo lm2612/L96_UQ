@@ -79,3 +79,53 @@ class BayesianNN(PyroModule):
         with pyro.plate("data", mean.shape[0]):
             obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1))
         return obs
+
+class BayesianNN_Heteroscedastic(PyroModule):
+    """Bayesian neural network with arbitrary number of hidden layers - can be used for epistemic uncertainty (_RETURN) or both
+    aleatoric and epistemic (obs)"""
+    def __init__(self, n_features=1, n_targets=1, n_hidden=[16], eps=1e-15):
+        super().__init__()
+        self.n_features = n_features
+        self.n_targets = n_targets
+        self.n_hidden = n_hidden
+        self.eps = eps
+
+        nodes = [n_features]+n_hidden+[n_targets*2]
+
+        self.layers = PyroModule[torch.nn.ModuleList]([])
+        for j in range(len(nodes)-1):
+            linear_j = PyroModule[torch.nn.Linear](nodes[j], nodes[j+1])
+            linear_j.weight = PyroSample(dist.Normal(0., 1.).expand([nodes[j+1], nodes[j]]).to_event(2))
+            linear_j.bias = PyroSample(dist.Normal(0., 10.).expand([nodes[j+1]]).to_event(1))
+            self.layers.append(linear_j)
+
+        self.activation_function = torch.nn.ReLU()
+
+    def forward(self, X, Y=None):
+        for j in range(len(self.layers)-1):
+            X = self.layers[j](X)
+            X = self.activation_function(X)
+        X = self.layers[-1](X)
+        # Split into mean and variance
+        mean, sigma = X.chunk(2, dim=-1)
+        # Enforce positive variance using exp and add small value (1e-15)
+        sigma = torch.exp(sigma) + self.eps
+
+        with pyro.plate("data", X.shape[0]):
+            obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1), obs=Y)
+        return mean
+
+    def get_fixed_param_NN(self, param_dict):
+        """Returns a NN torch module in same format as this model but with parameters fixed based on guide 
+        dictionary"""
+        return NN(self.n_features, self.n_targets*2, self.n_hidden, param_dict = param_dict)
+
+    def sample_obs(self, pred):
+        """Sample aleatoric noise (e.g., if using deterministic pred w/ fixed parameters)"""
+        # Split into mean and variance
+        mean, sigma = pred.chunk(2, dim=-1)
+        # Enforce positive variance using exp 
+        sigma = torch.exp(sigma) + self.eps
+        with pyro.plate("data", mean.shape[0]):
+            obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1))
+        return obs

@@ -1,5 +1,7 @@
 def plotcolor(name):
-    if "aleatoric" in name:
+    if "IC" in name:
+        return "pink"
+    elif "aleatoric" in name:
         return "seagreen"
     elif "epistemic" in name:
         return "darkorchid"

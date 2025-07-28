@@ -10,7 +10,7 @@ from utils.kde_plot import kde_plot
 
 from plotting_scripts.plot_dicts import plotcolor
 
-def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", 
+def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", fname="X_dtf",
         shading=True, spaghetti=False):
     """Plots ensembles - either shading for 1 std or spaghetti plot of each ensemble member"""
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
@@ -19,7 +19,7 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="",
     # Set up directories
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
     model_path = f'{data_path}/{model_name}/'
-    filenames = [f'{model_path}/{run_type}_X_dtf.npy' for run_type in run_types]
+    filenames = [f'{model_path}/{run_type}_{fname}.npy' for run_type in run_types]
     print(filenames)
 
     plot_path = f'{model_path}/plots/'
@@ -27,7 +27,7 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="",
         os.makedirs(plot_path)
 
     # Load truth data
-    X_truth = np.load(f"{data_path}/X_dtf.npy")
+    X_truth = np.load(f"{data_path}/{fname}.npy")
 
     # Load ml param model results
     X_mls = [np.load(filename) for filename in filenames]

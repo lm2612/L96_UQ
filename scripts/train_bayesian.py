@@ -14,7 +14,7 @@ from pyro.optim import Adam
 
 from ml_models.BayesianModels import BayesianLinearRegression, BayesianNN
 from utils.summary_stats import summary_stats
-
+from plotting_scripts.plot_inputs_outputs import plot_inputs_outputs
 
 def bayesian_train(params, training_params, model_name, model, guide):
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
@@ -41,7 +41,7 @@ def bayesian_train(params, training_params, model_name, model, guide):
     U = U[::subsample]
 
     N = X.shape[0]
-    N_train = N_train #int(0.60 * N)
+    N_train = N_train 
     N_val = max(N - N_train, 0)   # Use remainder for validation
 
     features = np.ravel(X[:N_train])   
@@ -124,72 +124,9 @@ def bayesian_train(params, training_params, model_name, model, guide):
 
     print(model, guide)
 
-    # Plot and save best NN so far - first load these from saved file
-    output_dicts = torch.load(f"{save_model_path}/model_best.pt")
-    model = output_dicts["model"]
-    guide = output_dicts["guide"]
-    pyro.get_param_store().load( f"{save_model_path}/pyro_best_params.pt")
-
-    # Set up plot
-    plt.clf()
-    figure, ax = plt.subplots(1)
-    X_domain = torch.linspace(-15, 20., 100).unsqueeze(-1)
-
-    # Plot raw data
-    plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
-    plt.axis(ymin=-20., ymax=20., xmin=-15., xmax=20.)
-    plt.xticks(fontsize=18)
-    plt.yticks(fontsize=18)
-    plt.xlabel("$X$", fontsize=18)
-    plt.ylabel("$U$", fontsize=18)
-    plt.tight_layout()
-    plt.savefig(f"{save_model_path}/data.png")
-    print(f"{save_model_path}/data.png")
-
-    # Deterministic prediction 
-    fixed_param_NN = model.get_fixed_param_NN(guide.median())
-    fixed_param_NN.eval()
-    det_pred = fixed_param_NN(X_domain).detach()
-    plt.plot(X_domain.squeeze(), det_pred.squeeze(), color="k", linewidth=2, label="mean")
-    plt.savefig(f"{save_model_path}/offline_deterministic.png")
-
-    # Predictive 
-    num_samples = 800
-    predictive = Predictive(model, guide=guide, num_samples=num_samples,
-                            return_sites=("obs", "_RETURN"))
-    samples = predictive(X_domain)
-    pred_summary = summary_stats(samples)
-
-    # Both
-    plt.fill_between(X_domain.squeeze(), 
-                 pred_summary["obs"]["5%"].squeeze(), 
-                 pred_summary["obs"]["95%"].squeeze(),
-                 color="dimgrey", alpha=0.2, label="both")
-
-    # Aleatoric only 
-    print(det_pred.shape)
-    aleatoric_samples = torch.zeros((num_samples, det_pred.shape[0]))
-    for n in range(num_samples):
-        aleatoric_samples[n, :] = model.sample_obs(det_pred).detach().squeeze()
-    std = torch.std(aleatoric_samples, dim=0)
-    plt.fill_between(X_domain.squeeze(), 
-                det_pred.squeeze() - 2*std, 
-                det_pred.squeeze() + 2*std,
-                color="seagreen", alpha=0.4, label="aleatoric")
+    # Plot inputs and outputs for best NN saved
+    plot_inputs_outputs(params, training_params, model_name)
     
-    # Epistemic only
-    plt.fill_between(X_domain.squeeze(), 
-                 pred_summary["_RETURN"]["5%"].squeeze(), 
-                 pred_summary["_RETURN"]["95%"].squeeze(),
-                 color="darkorchid", alpha=0.4, label="epistemic")
-    
-    plt.legend()
-    plt.axis(ymin=-18., ymax=22.,xmin=-18., xmax=22.)
-
-    plt.savefig(f"{save_model_path}/input_outputs_NN_2sigma.png")
-    print(f"{save_model_path}/input_outputs_NN_2sigma.png")
-    print("Plots done")
-
 
 if __name__ == "__main__":
     params ={

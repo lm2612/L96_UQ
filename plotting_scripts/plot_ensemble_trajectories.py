@@ -9,6 +9,7 @@ from L96.L96_model import L96OneLayerParam
 from utils.kde_plot import kde_plot
 
 from plotting_scripts.plot_dicts import plotcolor
+from utils.add_time_axis import add_axis_weather
 
 def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", fname="X_dtf",
         shading=True, spaghetti=False):
@@ -79,6 +80,7 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", f
             axs[k].set_xlabel("Time")
             axs[k].set_title(f"Initial Condition {i}")
             axs[k].legend(loc="upper left")
+            add_axis_weather(axs[k])
         plt.tight_layout()
         plt.savefig(f"{plot_path}{save_prefix}ensemble_timeseries_{i}.png")
         print(f"Saved as {plot_path}{save_prefix}ensemble_timeseries_{i}.png")

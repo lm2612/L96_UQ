@@ -7,7 +7,7 @@ import pickle
 from sklearn.decomposition import PCA
 
 from plotting_scripts.plot_dicts import plotcolor
-
+from utils.add_time_axis import add_axis_climate
 
 def plot_regime_uncertainty_time(params, model_name, run_types, label_names, save_prefix="", fname="X_dtf"):
     """Plots ensembles - either shading for 1 std or spaghetti plot of each ensemble member"""
@@ -84,6 +84,8 @@ def plot_regime_uncertainty_time(params, model_name, run_types, label_names, sav
     plt.legend()
     plt.xlabel("Time (MTU)")
     plt.ylabel("Fraction of time spent in regime 1")
+    add_axis_climate(ax)
+
     plt.savefig(f"{plot_path}/{save_prefix}regime_ens_spread.png")
     print(f"{plot_path}/{save_prefix}regime_ens_spread.png")
 
@@ -93,6 +95,8 @@ def plot_regime_uncertainty_time(params, model_name, run_types, label_names, sav
             ax.plot(time, percent_spent_in_regime_1[r, n], 
             color = plotcolor(run_types[r]), 
             lw=1, alpha = 0.3)
+
+    add_axis_climate(ax)
 
     plt.savefig(f"{plot_path}/{save_prefix}regime_ens_mem.png")
     print(f"{plot_path}/{save_prefix}regime_ens_mem.png")
@@ -122,6 +126,8 @@ def plot_regime_uncertainty_time(params, model_name, run_types, label_names, sav
     plt.legend()
     plt.xlabel("Time (MTU)")
     plt.ylabel("Fraction of time spent in regime 1")
+    add_axis_climate(ax)
+
     plt.savefig(f"{plot_path}/{save_prefix}regime_convergence.png")
     print(f"{plot_path}/{save_prefix}regime_convergence.png")
 
@@ -137,6 +143,7 @@ def plot_regime_uncertainty_time(params, model_name, run_types, label_names, sav
     plt.legend()
     plt.xlabel("Time (MTU)")
     plt.ylabel("Standard deviation across ensemble in fraction of time spent in regime 1")
+    add_axis_climate(ax)
     plt.savefig(f"{plot_path}/{save_prefix}regime_uncertainty_time.png")
     print(f"{plot_path}/{save_prefix}regime_uncertainty_time.png")
 
@@ -154,9 +161,10 @@ if __name__ == "__main__":
 
     # Set up model and types of simulations to plot
     N_train = 50
-    model_name = f"BayesianNN_16_N{N_train}"
-    run_types = ["epistemic", "aleatoric",] # Or run_types = ["epistemic_fix", "aleatoric_AR1_", ...]
+    model_name = f"BayesianNN_16_16_N{N_train}"
+    run_types = ["epistemic_fix"] #, "aleatoric",] # Or run_types = ["epistemic_fix", "aleatoric_AR1_", ...]
     label_names = [ "Epistemic", "Aleatoric", "Both"]
     save_prefix = "whitenoise_"
+    fname = "run00_X_dtf"
 
-    plot_regime_uncertainty_time(params, model_name, run_types, label_names, save_prefix=save_prefix)
+    plot_regime_uncertainty_time(params, model_name, run_types, label_names, save_prefix=save_prefix, fname = fname)

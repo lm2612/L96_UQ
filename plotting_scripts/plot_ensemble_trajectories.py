@@ -12,7 +12,7 @@ from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_weather
 
 def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", fname="X_dtf",
-        shading=True, spaghetti=False):
+        shading=True, spaghetti=False, max_plots = 10):
     """Plots ensembles - either shading for 1 std or spaghetti plot of each ensemble member"""
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -43,6 +43,8 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", f
     X_init_conds = X_truth[0:N_init:nt]
 
     for i in range(N_init):
+        if i > max_plots:
+            break
         print(f"Plotting initial condition {i}")
         
         plt.clf()

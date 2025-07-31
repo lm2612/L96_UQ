@@ -76,8 +76,8 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
     add_axis_weather(axs,  max_days = 35., step_days = 10.)
 
     plt.tight_layout()
-    plt.savefig(f"{plot_path}/X_rmse_timeseries.png")
-    print(f"Saved to {plot_path}/X_rmse_timeseries.png")
+    plt.savefig(f"{plot_path}/{save_prefix}X_rmse_timeseries.png")
+    print(f"Saved to {plot_path}/{save_prefix}X_rmse_timeseries.png")
 
 
     # Plot variance only
@@ -108,8 +108,8 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
     add_axis_weather(axs,  max_days = 35., step_days = 10.)
 
     plt.tight_layout()
-    plt.savefig(f"{plot_path}/X_std_timeseries.png")
-    print(f"Saved to {plot_path}/X_std_timeseries.png")
+    plt.savefig(f"{plot_path}/{save_prefix}X_std_timeseries.png")
+    print(f"Saved to {plot_path}/{save_prefix}X_std_timeseries.png")
 
     # Plot CRPS
     plt.clf()
@@ -130,6 +130,6 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
     axs.set_xlabel("Time")
     add_axis_weather(axs,  max_days = 35., step_days = 10.)
     plt.tight_layout()
-    plt.savefig(f"{plot_path}/X_crps_timeseries.png")
+    plt.savefig(f"{plot_path}{save_prefix}X_crps_timeseries.png")
 
-    print(f"Saved to {plot_path}/X_crps_timeseries.png")
+    print(f"Saved to {plot_path}/{save_prefix}X_crps_timeseries.png")

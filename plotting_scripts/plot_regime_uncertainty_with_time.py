@@ -9,74 +9,72 @@ from sklearn.decomposition import PCA
 from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_climate
 
-def plot_regime_uncertainty_time(params, model_name, run_types, label_names, save_prefix="", fname="X_dtf"):
-    """Plots ensembles - either shading for 1 std or spaghetti plot of each ensemble member"""
+def plot_regime_uncertainty_time(params, model_name, run_types, label_names, save_prefix="", fnames=["X_dtf"]):
+    """Climate predictions"""
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
+    if isinstance(fnames, str):
+        fnames = [fnames]
 
     # Set up directories
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
     model_path = f'{data_path}/{model_name}/'
-    filenames = [f'{model_path}/{run_type}_{fname}.npy' for run_type in run_types]
-    print(filenames)
 
     plot_path = f'{model_path}/plots/'
     if not os.path.exists(plot_path):
         os.makedirs(plot_path)
 
     # Load truth data
-    X_truth = np.load(f"{data_path}/{fname}.npy")
+    X_truth = np.stack([np.load(f'{data_path}/{fname}.npy') for fname in fnames])
+    print(X_truth.shape)
     
-    # Load ml param model results
-    X_mls = [np.load(filename) for filename in filenames]
+    # Load ml param model results - must all be same size
+    X_mls = np.stack([[np.load(f'{model_path}/{run_type}_{fname}.npy') for fname in fnames] for run_type in run_types])
+    print(X_mls.shape)
+    n_ens = X_mls.shape[2]
+    N_init = X_mls.shape[1]
+    len_time = X_mls.shape[3]
 
     # Load PCA object
     pca = np.load(f"{data_path}/pca_fit.npy", allow_pickle=True).item()
     print(pca)
 
     ## How often is our simulation in each 'regime' over the entire timeseries - look for dominant PCs
-    X_transformed = pca.transform(X_truth)
-    max_pc = np.argmax(X_transformed, axis=1)
+    X_transformed = np.stack([pca.transform(X_truth[i]) for i in range(N_init)])
+    max_pc = np.argmax(X_transformed, axis=2)
     true_regimes = max_pc//2
     true_regime_wn1 = np.sum(true_regimes==0)
-    true_regime_tot = true_regimes.shape[0]
-    print(true_regimes.shape)
+    true_regime_tot = true_regimes.shape[0]*true_regimes.shape[1]
     print(true_regime_wn1 / true_regime_tot)
 
-    len_time = X_mls[0].shape[1]
-
-
-    ### I AM HERE
     pred_regimes = []
     n_ens = 50
-    pred_regimes = np.zeros((len(run_types), n_ens, len_time))
+    pred_regimes = np.zeros((len(run_types), N_init, n_ens, len_time))
     for r in range(len(run_types)):
-        X_ml = X_mls[r]
-        n_ens  = X_ml.shape[0]
-        print(X_ml.shape)
-        for m in range(n_ens):
-            X_transformed = pca.transform(X_ml[m])
-            max_pc = np.argmax(X_transformed, axis=1)
-            pred_regimes[r, m, :] = max_pc//2
+        for i in range(N_init):
+            for m in range(n_ens):
+                X_transformed = pca.transform(X_mls[r, i, m])
+                max_pc = np.argmax(X_transformed, axis=1)
+                pred_regimes[r, i, m, :] = max_pc//2
 
     time_inds = range(100, len_time, 100)
     time = np.arange(100*dt_f, len_time * dt_f, 100 * dt_f)
-    percent_spent_in_regime_1 = np.zeros((len(run_types), n_ens, len(time_inds)))
+    percent_spent_in_regime_1 = np.zeros((len(run_types), N_init, n_ens, len(time_inds)))
     for j, t in enumerate(time_inds):
-        percent_spent_in_regime_1[:, :, j] = pred_regimes[:, :, :t].mean(axis=-1)
+        percent_spent_in_regime_1[..., j] = pred_regimes[..., :t].mean(axis=-1)
 
 
     fig, ax = plt.subplots(1, figsize=(10, 6))
     ax.axhline(true_regimes.mean(), color="black", linestyle="dashed", lw=2, label="Truth")
     for r in range(len(run_types)):
-        mean_percent_spent_in_regime_1 = percent_spent_in_regime_1[r, :].mean(axis=0)
+        mean_percent_spent_in_regime_1 = percent_spent_in_regime_1[r, :].mean(axis=(0,1))
         ax.plot(time, mean_percent_spent_in_regime_1, 
             label=label_names[r],
             alpha=0.8, lw=2,
             color=plotcolor(run_types[r]))
             
         # Shading
-        std_percent_spent_in_regime_1 = percent_spent_in_regime_1[r, :].std(axis=0)
+        std_percent_spent_in_regime_1 = percent_spent_in_regime_1[r, :].std(axis=(0,1))
         ax.fill_between(time, mean_percent_spent_in_regime_1 - std_percent_spent_in_regime_1, 
         mean_percent_spent_in_regime_1 + std_percent_spent_in_regime_1, 
             color = plotcolor(run_types[r]), 
@@ -91,10 +89,11 @@ def plot_regime_uncertainty_time(params, model_name, run_types, label_names, sav
 
     ax.axhline(true_regimes.mean(), color="black", linestyle="dashed", lw=2, label="Truth")
     for r in range(len(run_types)):
-        for n in range(n_ens):
-            ax.plot(time, percent_spent_in_regime_1[r, n], 
-            color = plotcolor(run_types[r]), 
-            lw=1, alpha = 0.3)
+        for i in range(N_init):
+            for m in range(n_ens):
+                ax.plot(time, percent_spent_in_regime_1[r, i, m], 
+                color = plotcolor(run_types[r]), 
+                lw=1, alpha = 0.3)
 
     add_axis_climate(ax)
 
@@ -103,18 +102,18 @@ def plot_regime_uncertainty_time(params, model_name, run_types, label_names, sav
 
 
     # Get mean and std 
-    time_inds = range(10, len_time, 10)
-    time = np.arange(10*dt_f, len_time *dt_f, 10 *dt_f)
+    print(pred_regimes.shape)
+    time_inds = range(10, len_time, 100)
+    time = np.arange(10*dt_f, len_time*dt_f, 100*dt_f)
     regime_timeseries_mean = np.zeros((len(run_types), len(time_inds)))
     regime_timeseries_std = np.zeros((len(run_types), len(time_inds)))
     for r in range(len(run_types)):
         for j, t in enumerate(time_inds):
-            mean_ens = pred_regimes[r, :, :t].mean(axis=-1)
+            mean_ens = pred_regimes[r, :, :, :t].mean(axis=-1)
             regime_timeseries_mean[r, j] = mean_ens.mean()
             regime_timeseries_std[r, j] =  mean_ens.std()
 
     ## Plot
-
     plt.clf()
     fig, ax = plt.subplots(1, figsize=(10, 6))
     ax.axhline(true_regimes.mean(), color="black", linestyle="dashed", lw=2, label="Truth")
@@ -162,9 +161,9 @@ if __name__ == "__main__":
     # Set up model and types of simulations to plot
     N_train = 50
     model_name = f"BayesianNN_16_16_N{N_train}"
-    run_types = ["epistemic_fix"] #, "aleatoric",] # Or run_types = ["epistemic_fix", "aleatoric_AR1_", ...]
+    run_types = ["epistemic_fix", "aleatoric_AR1", "both_fix_AR1"] #, "aleatoric",] # Or run_types = ["epistemic_fix", "aleatoric_AR1_", ...]
     label_names = [ "Epistemic", "Aleatoric", "Both"]
     save_prefix = "whitenoise_"
-    fname = "run00_X_dtf"
+    fnames = [f"run{i:02d}_X_dtf" for i in range(5)]
 
-    plot_regime_uncertainty_time(params, model_name, run_types, label_names, save_prefix=save_prefix, fname = fname)
+    plot_regime_uncertainty_time(params, model_name, run_types, label_names, save_prefix=save_prefix, fnames = fnames)

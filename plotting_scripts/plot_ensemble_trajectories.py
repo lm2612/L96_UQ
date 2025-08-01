@@ -17,6 +17,11 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", f
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
 
+    if isinstance(run_types, str):
+        run_types = [run_types]
+    if isinstance(label_names, str):
+        label_names = [label_names]
+
     # Set up directories
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
     model_path = f'{data_path}/{model_name}/'

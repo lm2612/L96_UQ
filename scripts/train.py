@@ -113,26 +113,33 @@ def train(params, training_params, model_name, model):
     # Plot and save result
     model.eval()
     plt.clf()
-    figure, ax = plt.subplots(1)
-    X_domain = torch.linspace(-15, 20., 100).unsqueeze(-1)
-    pred = model(X_domain).detach()
-
+    
     # Plot
-    plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
-    plt.axis(ymin=-15., ymax=20.,xmin=-15., xmax=20.)
+    Xmin=-14
+    Xmax=24
+    Ymin=-22
+    Ymax=22
+    figure, ax = plt.subplots(1)
+    X_domain = torch.linspace(Xmin, Xmax, 80).unsqueeze(-1)
+
+    # Plot raw data
+    plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2, label="Training data")
+    plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
     plt.xlabel("$X$", fontsize=18)
     plt.ylabel("$U$", fontsize=18)
     plt.tight_layout()
     plt.savefig(f"{save_model_path}/data.png")
-    plt.plot(X_domain.squeeze(), pred.squeeze(), color="r", linewidth=2)
+    print(f"{save_model_path}/data.png")
 
-    plt.xlabel("Parameterisation input")
-    plt.ylabel("Parameterisation output")
-    plt.title("2-layer NN")
-    plt.savefig(f"{save_model_path}/input_outputs_NN.png")
-    print("Plots done")
+    # Deterministic prediction 
+    det_pred = model(X_domain).detach()
+
+    plt.plot(X_domain.squeeze(), det_pred, color="k", linewidth=2, label="Deterministic NN")
+    plt.legend()
+    plt.savefig(f"{save_model_path}/offline_deterministic.png")
+    print(f"{save_model_path}/offline_deterministic.png")
     plt.close()
 
 if __name__ == "__main__":
@@ -146,15 +153,14 @@ if __name__ == "__main__":
         'dt': 0.001,
         'dt_f': 0.005,
     }
-    training_params = {'N_train': 50, 
+    training_params = {'N_train': 100, 
                        'batch_size':128,
                        'N_timesteps':1}
     N_train = training_params['N_train']
-    seeds = range(100, 101) #, 150)
-    for seed in seeds:
-        model_name =  f"NN_16_N{N_train}"      # Choose LinearRegression or NN 
-        np.random.seed(seed)
-        model = NN(1, 1, [16, 16]) #, dropout_rate=0.5)
-        total_params = sum(p.numel() for p in model.parameters())
-        print("TOTAL PARAMS: ", total_params)
-        train(params, training_params, model_name, model)
+    model_name =  f"NN_16_N{N_train}"      # Choose LinearRegression or NN 
+        
+    np.random.seed(100)
+    model = NN(1, 1, [16]) #, dropout_rate=0.5)
+    total_params = sum(p.numel() for p in model.parameters())
+    print("TOTAL PARAMS: ", total_params)
+    train(params, training_params, model_name, model)

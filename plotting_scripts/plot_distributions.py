@@ -11,7 +11,7 @@ from utils.kde_plot import kde_plot
 from plotting_scripts.plot_dicts import plotcolor
 
 
-def plot_distributions(params, model_name, run_types, label_names, save_prefix=""):
+def plot_distributions(params, model_name, run_types, label_names, save_prefix="", linestyles = None):
     """Plots distributions """
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -33,19 +33,24 @@ def plot_distributions(params, model_name, run_types, label_names, save_prefix="
     X_mls = [np.load(filename) for filename in filenames]
 
     # Plot distributions
-    fig = plt.figure(figsize=(10, 5))
-    X_domain = np.linspace(-25., 25., 80)
+    fig = plt.figure(figsize=(8, 5), dpi=100)
+    X_domain = np.linspace(-15., 20., 100)
+    for r in range(len(run_types)):
+        pdf = kde_plot(X_mls[r], X_domain)
+        plt.plot(X_domain, pdf, 
+                label=label_names[r],
+                color=plotcolor(run_types[r]),
+                alpha=0.6, 
+                linestyle=linestyles[r] if linestyles is not None else "solid")
     pdf_truth = kde_plot(X_truth[:], X_domain)
-    plt.plot(pdf_truth, color="black", label="Truth")
-    for X_ml, run_type, label_name in zip(X_mls, run_types, label_names):
-        pdf = kde_plot(X_ml[:], X_domain)
-        plt.plot(pdf, 
-                label=label_name,
-                color=plotcolor(run_type),
-                alpha=0.6)
+    plt.plot(X_domain, pdf_truth, color="black", label="Truth")
+
     plt.legend()
     plt.savefig(f"{plot_path}{save_prefix}X_pdf.png")
     print(f"Saved to {plot_path}{save_prefix}X_pdf.png")
+    plt.gca().set_yscale('log')
+    plt.savefig(f"{plot_path}{save_prefix}X_log_pdf.png")
+    print(f"Saved to {plot_path}{save_prefix}X_log_pdf.png")
 
 
 if __name__ == "__main__":

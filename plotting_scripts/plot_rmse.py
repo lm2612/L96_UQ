@@ -12,7 +12,8 @@ from utils.crps import crps
 from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_weather
 
-def plot_error_trajectories(params, model_name, run_types, label_names, save_prefix="", plot_spread=True, include_sum=False):
+def plot_error_trajectories(params, model_name, run_types, label_names, save_prefix="", 
+    plot_spread=True, include_sum=False, linestyles=None):
     """Plots error trajectories """
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -70,7 +71,7 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
                 linestyle="dashed")
 
     axs.axis(xmin=0, xmax=6)
-    axs.legend(loc="lower right")
+    axs.legend(loc="lower right", ncol=2 if len(run_types)>4 else 1)
     axs.set_ylabel(f"X")
     axs.set_xlabel("Time")
     add_axis_weather(axs,  max_days = 35., step_days = 10.)
@@ -89,8 +90,9 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
         axs.plot(time[0:nt], np.sqrt(X_var_m[r]), 
             alpha=0.8,
             color=plotcolor(run_types[r]),
-            label=label_names[r])
-        if include_sum and (("epistemic" or "aleatoric") in run_types[r]):
+            label=label_names[r],
+            linestyle=linestyles[r] if linestyles is not None else "solid")
+        if include_sum and (("epistemic" in run_types[r]) or ("aleatoric")in run_types[r]):
             variance_sum += X_var_m[r]
         
     # Include sum of epistemic and aleatoric
@@ -102,7 +104,7 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
                 linestyle="dashed")
 
     axs.axis(xmin=0, xmax=6)
-    axs.legend(loc="lower right")
+    axs.legend(loc="lower right" , ncol=2 if len(run_types)>4 else 1)
     axs.set_ylabel(f"X")
     axs.set_xlabel("Time")
     add_axis_weather(axs,  max_days = 35., step_days = 10.)
@@ -115,17 +117,19 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
     plt.clf()
     fig, axs = plt.subplots(1, 1, figsize=(6, 4), sharex=True)
 
-    for X_ml, run_type, label_name in zip(X_mls, run_types, label_names):
+    for r in range(len(run_types)): 
+        X_ml = X_mls[r]
         n_ens = X_ml.shape[0]
         if n_ens > 1:
             X_ml = X_ml.reshape((n_ens, N_init, nt, K))
             err = crps(X_truth, X_ml).mean(axis=-1)
             axs.plot(time[0:nt], err, 
-                label=label_name, 
+                label=label_names[r], 
                 alpha=0.8,
-                color=plotcolor(run_type))
+                color=plotcolor(run_types[r]),
+                linestyle=linestyles[r] if linestyles is not None else "solid")
     axs.axis(xmin=0, xmax=6)
-    axs.legend(loc="lower right")
+    axs.legend(loc="lower right", ncol=2 if len(run_types)>4 else 1)
     axs.set_ylabel(f"X")
     axs.set_xlabel("Time")
     add_axis_weather(axs,  max_days = 35., step_days = 10.)

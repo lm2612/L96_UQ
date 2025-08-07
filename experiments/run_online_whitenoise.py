@@ -29,13 +29,13 @@ test_params = { 'fname':'X_dtf.npy',
                 'save_model_path':'',
                 'save_prefix':'',
                 'n_ens': 50,
-                'N_init': 20,
+                'N_init': 100,
                 'save_step': 1,
                 'T':10 ,
                 'F':20                  }
 
 # Model name
-model_name =  f"BayesianNN_16_N50" 
+model_name =  f"BayesianNN_16_16_N100" 
 model_path = f"./data/K{params['K']}_J{params['J']}_h{params['h']}_c{params['c']}_b{params['b']}_F{params['F']}/{model_name}/"
 test_params['save_model_path'] = model_path
 
@@ -44,9 +44,7 @@ output_dicts = torch.load(f"{model_path}/model_best.pt", weights_only=False)
 pyro.get_param_store().load(f"{model_path}/pyro_params.pt")
 pyro_model = output_dicts["model"]
 guide = output_dicts["guide"]
-#predictive = Predictive(pyro_model, guide=guide, num_samples=1, return_sites=("_RETURN", "obs"))
 
-# Run Epistemic with white noise
 def param_func(x):
     fixed_param_NN = pyro_model.get_fixed_param_NN(guide())
     fixed_param_NN.eval()
@@ -55,7 +53,7 @@ def param_func(x):
     return out.squeeze()
 test_params['runtype'] = 'epistemic'
 test_params['save_prefix'] = 'epistemic_' 
-test(params, test_params, param_func)
+#test(params, test_params, param_func)
 
 # Run Aleatoric with white noise
 fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())
@@ -68,7 +66,7 @@ def param_func(x):
 
 test_params['runtype'] = 'aleatoric'
 test_params['save_prefix'] = 'aleatoric_' 
-test(params, test_params, param_func)
+#test(params, test_params, param_func)
 
 # Run both types of uncertainty 
 def param_func(x):
@@ -81,7 +79,7 @@ def param_func(x):
 
 test_params['runtype'] = 'both'
 test_params['save_prefix'] = 'both_' 
-#test(params, test_params, param_func)
+test(params, test_params, param_func)
 
 # Deterministic - no uncertainty
 fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())

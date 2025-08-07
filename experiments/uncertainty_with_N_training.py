@@ -23,6 +23,7 @@ params ={
     'dt': 0.001,
     'dt_f': 0.005,
     }
+
 training_params = {
     'N_train': 50, 
     'batch_size': 128,
@@ -30,16 +31,17 @@ training_params = {
     'lr': 0.002,
     'num_iterations' : 10000 ,
 }
-N_train = training_params['N_train']
 
-seed = 123
-np.random.seed(seed)
-torch.manual_seed(seed)
+for N_train in [20, 40, 60, 80, 120, 140, 160, 180]:
+    training_params['N_train'] = N_train
+    seed = 123
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 
-model_name =  f"BayesianNN_8_8_N{N_train}"      # Choose LinearRegression or NN 
-model = BayesianNN(1, 1, [8, 8]) 
-guide = AutoMultivariateNormal(model)
+    model_name =  f"BayesianNN_16_16_N{N_train}"      # Choose LinearRegression or NN 
+    model = BayesianNN(1, 1, [16, 16]) 
+    guide = AutoMultivariateNormal(model)
 
-bayesian_train(params, training_params, model_name, model, guide)
+    bayesian_train(params, training_params, model_name, model, guide)
 

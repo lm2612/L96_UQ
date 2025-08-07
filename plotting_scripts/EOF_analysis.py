@@ -24,15 +24,19 @@ np.random.seed(seed)
 
 # Set up directory
 data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
-plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
+plot_path = f'{data_path}/'
 
 # Load truth data
-X_truth = np.load(f"{data_path}/truth/X_dtf.npy")
+X_truth = np.load(f"{data_path}/X_dtf.npy")
 
-print(X_truth.shape)
 n_components=4
 pca = PCA(n_components=n_components)
 pca.fit(X_truth)
+
+# Save PCA object
+np.save(f"{data_path}/pca_fit.npy", pca)
+print(f"saved as {data_path}/pca_fit.npy")
+
 print(pca.singular_values_.shape)
 print(pca.components_.shape)
 print(pca.explained_variance_ratio_.shape)
@@ -52,7 +56,6 @@ print(f"Saved to {plot_fname}")
 
 ## How often is our simulation in each 'regime' - look for dominant PCs
 X_transformed = pca.transform(X_truth)
-
 
 fig, axs= plt.subplots(n_components//2, figsize=(6, 6), sharex=True)
 axs = axs.flatten()
@@ -93,10 +96,12 @@ plot_fname = f"{plot_path}/max_PC_1-4.png"
 plt.savefig(plot_fname)
 print(f"Saved to {plot_fname}")
 
+max_time = 20000
+truth_regimes = max_pc//2
 
 plt.clf()
 fig, ax = plt.subplots(1, figsize=(6, 3), sharex=True)
-ax.plot(np.arange(NT), max_pc//2, color="black", label="Truth")
+ax.plot(np.arange(NT), truth_regimes, color="black", label="Truth")
 plt.axis(xmin=0, xmax=5000, ymin = -0.5, ymax=1.5)
 plt.yticks([0, 1], ["PC1/PC2", "PC3/PC4"])
 plt.xlabel("Time")
@@ -105,120 +110,4 @@ plt.tight_layout()
 plot_fname = f"{plot_path}/max_PC_1-2.png"
 plt.savefig(plot_fname)
 print(f"Saved to {plot_fname}")
-true_regimes = max_pc//2
 
-runtypes = ['aleatoric', 'epistemic', 'both']
-colors = ['seagreen', 'darkorchid', 'blue']
-model_name = 'BayesianNN_2layer_N50'
-pred_regimes = []
-for runtype, color in zip(runtypes,colors):
-    filename = f'{data_path}/{model_name}/longrun_{runtype}_X_dtf.npy' 
-    X = np.load(filename).squeeze()
-    X_transformed = pca.transform(X)
-    NT = X.shape[0]
-    max_pc = np.argmax(X_transformed, axis=1)
-    ax.plot(np.arange(NT), max_pc//2, alpha=0.5, color=color, label=runtype)
-    pred_regimes.append(max_pc//2)
-model_names = ['NN_2layer_N50','NN_2layer_regime0_N50', 'NN_2layer_regime1_N50' ]   
-runtypes.append('deterministic')
-runtypes.append('regime1')
-runtypes.append('regime2')
-for runtype, model_name in zip(runtypes[3:], model_names):
-    filename = f'{data_path}/{model_name}/longrun_X_dtf.npy' 
-    X = np.load(filename).squeeze()
-    X_transformed = pca.transform(X)
-    NT = X.shape[0]
-    max_pc = np.argmax(X_transformed, axis=1)
-    ax.plot(np.arange(NT), max_pc//2, alpha=0.5, color=color, label=runtype)
-    pred_regimes.append(max_pc//2)
-
-plt.axis(xmax=1000)
-plt.legend()
-plot_fname = f"{plot_path}/max_PC_BayesianNN.png"
-plt.savefig(plot_fname)
-print(f"Saved to {plot_fname}")
-
-## Time spent in each regime
-plt.clf()
-true_regimes = true_regimes[:NT]
-print(np.sum(true_regimes==0), np.sum(true_regimes==1))
-plt.bar(["Truth"], NT, color="red", label="Regime 2 (wn 1)")
-plt.bar(["Truth"], np.sum(true_regimes==0), color="blue", label="Regime 1 (wn 2)")
-for i in range(len(runtypes)):
-    pred_reg = pred_regimes[i]
-    print(runtypes[i], np.sum(pred_reg==0), np.sum(pred_reg==1))
-    plt.bar(runtypes[i], NT, color="red")
-    plt.bar(runtypes[i], np.sum(pred_reg==0), color="blue")
-
-plt.legend()
-plot_fname = f"{plot_path}/time_spent_in_regime.png"
-plt.savefig(plot_fname)
-print(f"Saved to {plot_fname}")
-
-
-# Time spent in regime for diff F
-plt.clf()
-true_regimes = true_regimes[:NT]
-print(np.sum(true_regimes==0), np.sum(true_regimes==1))
-plt.bar(20, NT, color="red", label="Regime 2 (wn 1)")
-plt.bar(20, np.sum(true_regimes==0), color="blue", label="Regime 1 (wn 2)")
-plt.legend()
-
-Fs=[10, 12, 14, 16, 18, 24, 28, 32, 36]
-for F in Fs:
-    pert_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
-    print(pert_path)
-    # Load truth data
-    X_pert = np.load(f"{pert_path}/X_dtf.npy").squeeze()
-    X_transformed = pca.transform(X_pert)
-    pert_regimes = np.argmax(X_transformed, axis=1)//2
-    plt.bar(F, NT, color="red", label="Regime 2 (wn 1)")
-    plt.bar(F, np.sum(pert_regimes==0), color="blue", label="Regime 1 (wn 2)")
-
-plot_fname = f"{plot_path}/time_spent_in_regime_pert.png"
-plt.savefig(plot_fname)
-print(f"Saved to {plot_fname}")
-
-
-
-# Time spent in regime + UQ for diff F=14
-F = 14
-pert_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
-plt.clf()
-runtypes = ['aleatoric', 'epistemic', 'both', 'deterministic']
-colors = ['seagreen', 'darkorchid', 'blue', 'grey']
-model_name = 'BayesianNN_2layer_N50'
-pred_regimes = []
-
-X_pert = np.load(f"{pert_path}/X_dtf.npy").squeeze()
-X_transformed = pca.transform(X_pert)
-pert_regimes = np.argmax(X_transformed, axis=1)//2
-
-
-for runtype, color in zip(runtypes,colors):
-    filename = f'{pert_path}/{model_name}/longrun_{runtype}_X_dtf.npy' 
-    X = np.load(filename).squeeze()
-    X_transformed = pca.transform(X)
-    NT = X.shape[0]
-    max_pc = np.argmax(X_transformed, axis=1)
-    ax.plot(np.arange(NT), max_pc//2, alpha=0.5, color=color, label=runtype)
-    pred_regimes.append(max_pc//2)
-
-true_regimes = true_regimes[:NT]
-print(np.sum(true_regimes==0), np.sum(true_regimes==1))
-plt.bar(["Truth F=20"],  np.sum(true_regimes==0)+ np.sum(true_regimes==1), color="red", label="Regime 2 (wn 1)")
-plt.bar(["Truth F=20"], np.sum(true_regimes==0), color="blue", label="Regime 1 (wn 2)")
-
-plt.bar(["Truth F=14"], np.sum(pert_regimes==0)+np.sum(pert_regimes==1), color="red")
-plt.bar(["Truth F=14"], np.sum(pert_regimes==0), color="blue")
-
-for i in range(len(runtypes)):
-    pred_reg = pred_regimes[i]
-    print(runtypes[i], np.sum(pred_reg==0), np.sum(pred_reg==1))
-    plt.bar(runtypes[i], np.sum(pred_reg==0)+np.sum(pred_reg==1), color="red")
-    plt.bar(runtypes[i], np.sum(pred_reg==0), color="blue")
-
-plt.legend(loc = "lower right")
-plot_fname = f"{plot_path}/time_spent_in_regime_F14.png"
-plt.savefig(plot_fname)
-print(f"Saved to {plot_fname}")

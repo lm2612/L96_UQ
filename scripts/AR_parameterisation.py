@@ -5,7 +5,8 @@ import torch
 import pyro
 
 class ParameterisationAR1():
-    def __init__(self, pyro_model, guide, sigma = 0., phi=0., res=0.):
+    def __init__(self, pyro_model, guide, sigma = 0., phi=0., res=0., 
+        aleatoric=True, epistemic=True, N=0):
         """Initialise parameterisation with any parameters needed
         Args: 
         Sigma = stochastic std / sigma from guide
@@ -19,6 +20,9 @@ class ParameterisationAR1():
         self.sigma = sigma
         self.phi2 = phi**2
         self.sqrt_1_minus_phi2 = np.sqrt(1-self.phi2)
+        self.aleatoric = aleatoric
+        self.epistemic = epistemic
+        self.N = N
 
         # draw parameters for first call
         self.guide_params = self.guide() 
@@ -45,6 +49,44 @@ class ParameterisationAR1():
             det = self.fixed_param_NN(x.unsqueeze(-1)).squeeze()
         self.res = self.phi * self.res + self.sqrt_1_minus_phi2 * self.sigma * np.random.randn(x.shape[0])
         return det + self.res
+
+    def estimate_epistemic_sigma(self, x, N=100):
+        """Estimate the variance using Monte Carlo estimate to integrate over parameters (weights)"""
+        if N==1:
+            with torch.no_grad():
+                det = self.deterministic_NN(x.unsqueeze(-1)).squeeze()
+                f = self.fixed_param_NN(x.unsqueeze(-1)).squeeze() - self.deterministic_NN(x.unsqueeze(-1)).squeeze()
+            sigma2 = (f - det)**2
+            return sigma2
+
+        f = torch.zeros((N, x.shape[0]))
+        for n in range(N):
+            self.sample_guide_params()
+            with torch.no_grad():
+                f[n] = self.fixed_param_NN(x.unsqueeze(-1)).squeeze()
+        sigma2 = torch.var(f, axis=0)
+        return sigma2
+    
+    def AR1_param(self, x):
+        """General AR1, can include aleatoric and epistemic with flags"""
+        with torch.no_grad():
+            det = self.deterministic_NN(x.unsqueeze(-1)).squeeze()
+        sigma2 = torch.zeros(x.shape[0])
+        if self.aleatoric:
+            sigma2 = sigma2 + self.sigma**2
+        if self.epistemic:
+            if self.N==1:
+                self.sample_guide_params()
+                with torch.no_grad():
+                    f = self.fixed_param_NN(x.unsqueeze(-1)).squeeze() 
+                res = (f - det)
+                self.res = self.phi * self.res + self.sqrt_1_minus_phi2 * res
+                return det + self.res
+            sigma2 = sigma2 + self.estimate_epistemic_sigma(x, N=self.N)    
+        sigma = torch.sqrt(sigma2)
+        self.res = self.phi * self.res + self.sqrt_1_minus_phi2 * sigma * np.random.randn(x.shape[0])
+        return det + self.res
+
 
     def epistemic_AR1(self, x):
         """Epistemic uncertainty treated as AR1, can do epistemic only if sigma=0 or both if sigma is set"""

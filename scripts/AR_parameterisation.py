@@ -107,13 +107,15 @@ class ParameterisationAR1():
 
 
 class ParameterisationAR1_Heteroscedastic(ParameterisationAR1):
-    def __init__(self, pyro_model, guide, include_sigma = False, phi=0., res=0.):
+    def __init__(self, pyro_model, guide, include_sigma = False, phi=0., res=0.,
+        aleatoric=True, epistemic=True, N=0):
         """Initialise parameterisation with any parameters needed
         Args: 
         Sigma = stochastic std / sigma from guide
         phi = Lag1 autocorrelation. if 1, error is same for each timestep, no stochasicity, if 0, whitenoise.
         err = initial error to start with for AR1 process"""
-        ParameterisationAR1.__init__(self, pyro_model, guide, sigma = 0., phi = phi, res = res)
+        ParameterisationAR1.__init__(self, pyro_model, guide, sigma = 0., phi = phi, res = res,
+        aleatoric = aleatoric, epistemic = epistemic, N=N)
         self.include_sigma = include_sigma
         
     def sample_guide_params(self):
@@ -154,4 +156,30 @@ class ParameterisationAR1_Heteroscedastic(ParameterisationAR1):
 
         # Update residual for next timestep
         self.res = self.phi * self.res + np.sqrt(1-self.phi**2) * res  
+        return mean_det.squeeze() + self.res
+
+    def estimate_epistemic_sigma(self, x, N=100):
+        """Estimate the variance using Monte Carlo estimate to integrate over parameters (weights)"""
+        f = torch.zeros((N, x.shape[0]))
+        for n in range(N):
+            self.sample_guide_params()
+            with torch.no_grad():
+                f_t = self.fixed_param_NN(x.unsqueeze(-1)).squeeze()
+                mean_t, sigma_t = f_t.chunk(2, dim=1) 
+                f[n] = mean_t.squeeze()
+        sigma2 = torch.var(f, axis=0)
+        return sigma2
+
+    def AR1_param(self, x):
+        """General AR1, can include aleatoric and epistemic with flags"""
+        with torch.no_grad():
+            f_det = self.deterministic_NN(x.unsqueeze(-1)).squeeze()
+            mean_det, sigma_det = f_det.chunk(2, dim=1)
+        sigma2 = torch.zeros(x.shape[0])
+        if self.aleatoric:
+            sigma2 = sigma2 + sigma_det.squeeze()**2
+        if self.epistemic:
+            sigma2 = sigma2 + self.estimate_epistemic_sigma(x, N=self.N)    
+        sigma = torch.sqrt(sigma2)
+        self.res = self.phi * self.res + self.sqrt_1_minus_phi2 * sigma * np.random.randn(x.shape[0])
         return mean_det.squeeze() + self.res

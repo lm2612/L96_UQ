@@ -13,10 +13,13 @@ from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_weather
 
 def plot_error_trajectories(params, model_name, run_types, label_names, save_prefix="", 
-    plot_spread=True, include_sum=False, linestyles=None):
+    plot_spread=True, include_sum=False, linestyles=None, colors=None):
     """Plots error trajectories """
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
+    if colors is None:
+        colors = [plotcolor(run_type) for run_type in run_types]
+
 
     # Set up directories
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
@@ -62,17 +65,17 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
         axs.plot(time[0:nt], X_rmse[r], 
             label=label_names[r], 
             alpha=0.8,
-            color=plotcolor(run_types[r]))
+            color=colors[r])
 
         if plot_spread:
             axs.plot(time[0:nt], np.sqrt(X_var_m[r]), 
                 alpha=0.8,
-                color=plotcolor(run_types[r]),
+                color=colors[r],
                 linestyle="dashed")
 
-    axs.axis(xmin=0, xmax=6)
+    axs.axis(xmin=0, xmax=6, ymin = 0., ymax=5.)
     axs.legend(loc="lower right", ncol=2 if len(run_types)>4 else 1)
-    axs.set_ylabel(f"X")
+    axs.set_ylabel(f"RMSE or Spread in $X$")
     axs.set_xlabel("Time")
     add_axis_weather(axs,  max_days = 35., step_days = 10.)
 
@@ -89,7 +92,7 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
     for r in range(len(run_types)):
         axs.plot(time[0:nt], np.sqrt(X_var_m[r]), 
             alpha=0.8,
-            color=plotcolor(run_types[r]),
+            color=colors[r],
             label=label_names[r],
             linestyle=linestyles[r] if linestyles is not None else "solid")
         if include_sum and (("epistemic" in run_types[r]) or ("aleatoric")in run_types[r]):
@@ -126,7 +129,7 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
             axs.plot(time[0:nt], err, 
                 label=label_names[r], 
                 alpha=0.8,
-                color=plotcolor(run_types[r]),
+                color=colors[r],
                 linestyle=linestyles[r] if linestyles is not None else "solid")
     axs.axis(xmin=0, xmax=6)
     axs.legend(loc="lower right", ncol=2 if len(run_types)>4 else 1)

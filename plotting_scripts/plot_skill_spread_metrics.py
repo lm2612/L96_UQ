@@ -12,7 +12,7 @@ from utils.kde_plot import kde_plot
 from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_weather
 
-def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=""):
+def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix="", ylim=3, samples_per_bin=25):
     """Plots spread skill metrics """
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -58,11 +58,8 @@ def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=
 
         n_samples = N_init * K
         print(n_samples)
-        samples_per_bin = 25
         n_bins = n_samples // samples_per_bin
         print(n_bins)
-
-        ylim=6.
 
         plt.clf()
         fig, axs = plt.subplots(1, 1, figsize=(6, 4), sharex=True)
@@ -88,7 +85,7 @@ def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=
 
             plt.scatter(spread, sigma_err, 
                 color=plotcolor(run_types[r]),
-                alpha=0.5,
+                alpha=0.8,
                 label=label_names[r])
         plt.legend(loc="lower right")
         plt.xlabel("r.m.s spread")

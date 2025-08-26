@@ -12,7 +12,7 @@ from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_weather
 
 def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", fname="X_dtf",
-        shading=True, spaghetti=False, max_plots = 10):
+        shading=True, spaghetti=False, save_step=1, max_plots=10, xmax=2):
     """Plots ensembles - either shading for 1 std or spaghetti plot of each ensemble member"""
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -41,10 +41,10 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", f
     # For all plots, time separation assumed to be 10
     T = 10
     nt = int(T/dt_f)
-    N_init = X_mls[0].shape[1] // nt
+    N_init = (X_mls[0].shape[1] * save_step) // nt
     time = np.arange(0, T, dt_f)
 
-    print(f"{N_init} initial conditions separated by {nt} time units")
+    print(f"{N_init} initial conditions separated by {nt//save_step} time units")
     X_init_conds = X_truth[0:N_init:nt]
 
     for i in range(N_init):
@@ -63,31 +63,32 @@ def plot_ensembles(params, model_name, run_types, label_names, save_prefix="", f
             for X_ml, run_type, label_name in zip(X_mls, run_types, label_names):
                 n_ens = X_ml.shape[0]
                 if shading:
-                    mean_X = X_ml[:, i*nt:(i+1)*nt, k].mean(axis=0)
-                    std_dev = X_ml[:, i*nt:(i+1)*nt, k].std(axis=0)
-                    axs[k].fill_between(time[0:nt], 
+                    mean_X = X_ml[:, i*nt//save_step:(i+1)*nt//save_step, k].mean(axis=0)
+                    std_dev = X_ml[:, i*nt//save_step:(i+1)*nt//save_step, k].std(axis=0)
+                    axs[k].fill_between(time[0:nt:save_step], 
                         mean_X - std_dev, 
                         mean_X + std_dev ,
                         alpha=0.2,
                         color=plotcolor(run_type))
                 if spaghetti:
                     for n in range(n_ens):
-                        axs[k].plot(time[0:nt], X_ml[n, i*nt:(i+1)*nt, k],
+                        axs[k].plot(time[0:nt:save_step], 
+                                    X_ml[n, i*nt//save_step:(i+1)*nt//save_step, k],
                         alpha=0.4,
                         color=plotcolor(run_type))
                 # Plot mean (regardless of type of plot)
-                axs[k].plot(time[0:nt], X_ml[:, i*nt:(i+1)*nt, k].mean(axis=0),
+                axs[k].plot(time[0:nt:save_step], X_ml[:, i*nt//save_step:(i+1)*nt//save_step, k].mean(axis=0),
                     label=label_name, 
                     alpha=0.8, lw=2,
                     color=plotcolor(run_type))
                 
-            axs[k].axis(xmin=0, xmax=2., ymin = -10., ymax=16.)
+            axs[k].axis(xmin=0, xmax=xmax, ymin = -10., ymax=16.)
             axs[k].legend(loc="upper left")
             axs[k].set_ylabel(f"X_{k}")
             axs[k].set_xlabel("Time")
             axs[k].set_title(f"Initial Condition {i}")
             axs[k].legend(loc="upper left")
-            add_axis_weather(axs[k])
+            add_axis_weather(axs[k], xmax*5, 3 if xmax<3 else 5)
         plt.tight_layout()
         plt.savefig(f"{plot_path}{save_prefix}ensemble_timeseries_{i}.png")
         print(f"Saved as {plot_path}{save_prefix}ensemble_timeseries_{i}.png")

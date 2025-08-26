@@ -139,8 +139,8 @@ def plot_uncertainty_with_N_offline(params, model_start, N_trains, save_prefix="
         det_pred = fixed_param_NN(X_torch).detach()
         mean_pred = det_pred[:, 0]
         aleatoric_samples = torch.zeros((num_samples, det_pred.shape[0]))
-        for n in range(num_samples):
-            aleatoric_samples[n, :] = model.sample_obs(det_pred).detach().squeeze()
+        for ns in range(num_samples):
+            aleatoric_samples[ns, :] = model.sample_obs(det_pred).detach().squeeze()
         aleatoric_var = (torch.std(aleatoric_samples, dim=0)**2).mean()
 
         print(epistemic_var, both_var, aleatoric_var)
@@ -160,8 +160,8 @@ def plot_uncertainty_with_N_offline(params, model_start, N_trains, save_prefix="
                 label="Epistemic" if n==0 else None)
     ax.axis(xmin=0.)
     ax.legend(loc="upper right")
-    ax.set_ylabel(f"Variance")
-    ax.set_xlabel("N training data")
+    ax.set_ylabel(f"Variance across dataset")
+    ax.set_xlabel(f"Training data size")
     plt.tight_layout()
     plt.savefig(f"{plot_path}{save_prefix}variance_with_N_offline.png")
     print(f"Saved as {plot_path}{save_prefix}variance_with_N_offline.png")
@@ -188,12 +188,14 @@ if __name__ == "__main__":
 
     # Set up model and types of simulations to plot
     N_trains = [12, 20, 25, 40, 50, 60, 75, 80, 100, 120, 125, 140, 200]
+    N_trains = [10, 20, 40, 60, 80, 100, 120, 140, 160, 180]
+    #N_trains = [12, 25, 50, 75, 100, 125, 160, 200]
 
     model_start = f"BayesianNN_16_16_N"
     run_types = [ "both_1",  "aleatoric_1", "epistemic_1"] 
     label_names = [ "Both", "Aleatoric","Epistemic" ]
 
     plot_uncertainty_with_N_offline(params, model_start, N_trains)
-    plot_uncertainty_with_N_online(params, model_start, N_trains, run_types, label_names,  fname="X_dtf")
+    #plot_uncertainty_with_N_online(params, model_start, N_trains, run_types, label_names,  fname="X_dtf")
 
 

@@ -41,49 +41,57 @@ def plot_polar(X, ax=None):
     ax.set_axis_off()
     return ax
 
-# Get paths
-# Define dimensions of system (fixed)
-K = 8   
-J = 32  
+def plot_data_gif(params, model_name="", fname_X="X_dtf", fname_Y=None):
+    K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
+    dt, dt_f = params['dt'], params['dt_f']
+    seed = 123
+    np.random.seed(seed)
 
-# Define the "true" parameters
-h = 1
-F = 20  # 8
-c = 10
-b = 10
+    data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
+    model_path = f'{data_path}/{model_name}/'
+    plot_path = f'{model_path}/plots/'
+    if not os.path.exists(plot_path):
+        os.makedirs(plot_path)
 
-# Define time-stepping, random seed
-dt = 0.001
-dt_f = dt * 5
-seed = 123
-np.random.seed(seed)
+    # Load truth data
+    X_truth = np.load(f"{model_path}{fname_X}.npy")
+    n_time = X_truth.shape[0]
+
+    plt.clf()
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    # Create frames
+    frames = [(X_truth[t]) for t in range(0, 1000, 1)]
+    # Create animation
+    anim = FuncAnimation(fig, functools.partial(plot_polar, ax=ax), 
+                        frames=frames, interval=100, blit=False)
+    anim.save(f"{plot_path}/lorenz96_Xonly.gif") #, writer='imagemagick'
+    print(f"Saved animation to {plot_path}/lorenz96_Xonly.gif")
 
 
-plot_path = f'./plots/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
-data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
+    if fname_Y is not None:
+        Y_truth = np.load(f"{data_path}/{fname_Y}.npy")
+
+        plt.clf()
+        fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        # Create frames
+        frames = [(X_truth[t], Y_truth[t]) for t in range(0, 1000, 1)]
+        # Create animation
+        anim = FuncAnimation(fig, functools.partial(plot_polar, ax=ax), 
+                            frames=frames, interval=100, blit=False)
+        anim.save(f"{plot_path}/lorenz96_X_Yy.gif") #, writer='imagemagick'
+        print(f"Saved animation to {plot_path}/lorenz96_X_Y.gif")
 
 
-# Load truth data
-X_truth = np.load(f"{data_path}/X_dtf.npy")
-Y_truth = np.load(f"{data_path}/Y_dtf.npy")
+if __name__ == "__main__":
+    params ={
+        'F': 20,
+        'c': 10,
+        'b': 10,
+        'h': 1,
+        'J': 32,
+        'K': 8,
+        'dt': 0.001,
+        'dt_f': 0.005,
+    }
 
-n_time = X_truth.shape[0]
-
-fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-# Create frames
-frames = [(X_truth[t], Y_truth[t]) for t in range(0, 1000, 1)]
-# Create animation
-anim = FuncAnimation(fig, functools.partial(plot_polar, ax=ax), 
-                     frames=frames, interval=100, blit=False)
-anim.save(f"{plot_path}/lorenz96.gif") #, writer='imagemagick'
-print(f"Saved animation to {plot_path}/lorenz96.gif")
-
-plt.clf()
-fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-# Create frames
-frames = [(X_truth[t]) for t in range(0, 1000, 1)]
-# Create animation
-anim = FuncAnimation(fig, functools.partial(plot_polar, ax=ax), 
-                     frames=frames, interval=100, blit=False)
-anim.save(f"{plot_path}/lorenz96_Xonly.gif") #, writer='imagemagick'
-print(f"Saved animation to {plot_path}/lorenz96_Xonly.gif")
+    plot_data_gif(params)

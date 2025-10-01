@@ -25,7 +25,7 @@ def test(params, test_params, param_func, param_sample=None):
     save_model_path, save_prefix = test_params['save_model_path'], test_params['save_prefix']
 
     # Set up directories
-    data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/truth/'
+    data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
 
     F = test_params['F']
     if not os.path.exists(save_model_path):
@@ -34,12 +34,12 @@ def test(params, test_params, param_func, param_sample=None):
     print(f"Simulations will be saved under {save_model_path}/{save_prefix}")
 
     # Load truth data
-    X_truth = np.load(f"./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/{fname}")
+    X_truth = np.load(f"{data_path}/{fname}")
     nt = int(T/dt_f)
     X_init_conds = X_truth[::nt]
     # Check N_init cannot be longer than length of initial conditions
     if N_init > X_init_conds.shape[0] :
-        raise ValueError(f"N_init larger than the available number of intiial conditions in {data_path}/X_dtf.npy. Reduce T={T} or N_init={N_init}")
+        raise ValueError(f"N_init larger than the available number of initial conditions in {data_path}/X_dtf.npy. Reduce T={T} or N_init={N_init}")
 
     nt_total = N_init * nt
     print(f"Running model for {N_init} initial conditions, for T={T}MTU / {nt} timesteps). Total timesteps={nt_total}. ")
@@ -57,7 +57,7 @@ def test(params, test_params, param_func, param_sample=None):
         print(f"Ensemble member {n}")
         # If running fixed parameters for epistemic uncertainty, sample parameters 
         if param_sample is not None:
-            param_sample()
+            param_sample(n)
         for i in range(N_init):
             # Initialize model
             l96_model = L96OneLayerParam(X_0=X_init_conds[i], 
@@ -69,7 +69,6 @@ def test(params, test_params, param_func, param_sample=None):
             X, U, time = l96_model.iterate(T)
             X_all[n, i*nt:(i+1)*nt, :] = X[::save_step]
             U_all[n, i*nt:(i+1)*nt, :] = U[::save_step]
-
 
     # Save results
     np.save(f"{save_model_path}/{save_prefix}X_dtf.npy", X_all)

@@ -7,10 +7,13 @@ import pickle
 from sklearn.decomposition import PCA
 
 from plotting_scripts.plot_dicts import plotcolor
-from utils.add_time_axis import add_axis_climate
+from utils.add_time_axis import mtu_to_years
+from utils.kde_plot import kde_plot
+
 
 def plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, 
-    save_prefix="", fnames=["X_dtf"], save_step=1):
+    save_prefix="", fnames=["X_dtf"], save_step=1, kde=False, xmin=0.2, xmax=0.8, 
+    T=-1, spinup=0, title=""):
     """Climate predictions"""
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -28,6 +31,9 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
     # Load truth data
     X_truth = np.stack([np.load(f'{data_path}/{fname}.npy') for fname in fnames])
     print(X_truth.shape)
+    X_truth = X_truth[:, ::save_step, :]
+    print(X_truth.shape)
+
     
     # Load ml param model results - must all be same size
     X_mls = np.stack([[np.load(f'{model_path}/{run_type}_{fname}.npy') for fname in fnames] for run_type in run_types])
@@ -51,7 +57,6 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
     print(np.sum(true_regimes==1) / true_regime_tot)
     print(true_regimes.mean())
     print(true_regimes.shape, X_mls.shape)
-    true_regimes = true_regimes[:, ::save_step]
 
     pred_regimes = []
     n_ens = 50
@@ -68,50 +73,82 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
     print(len(time_inds), time.shape, pred_regimes.shape, true_regimes.shape)
 
     # Assess data up to time T - optional, can be max (-1) or shorter timescales
-    T = -1
-    pred_regimes = pred_regimes[...,:T]
-
+    if T==-1:
+        T = pred_regimes.shape[-1]
+    pred_regimes = pred_regimes[..., spinup:T]
+    
 
     # Fracion of time spent in regime 1 for each ensemble member / init cond
     n_init = pred_regimes.shape[1]
     n_ens = pred_regimes.shape[2]
     print(n_init)
-    fig, ax = plt.subplots(1, figsize=(10, 6))
+    #fig, ax = plt.subplots(1, figsize=(10, 6))
+    fig, ax = plt.subplots(1, figsize=(6, 2.5))
 
-    ax.axvline(true_regimes.mean(), color="k")
+
+    X_domain = np.arange(0.1, 0.8, 0.004)
+    ax.axvline(true_regimes[..., spinup:T].mean(), color="k", linestyle="dashed", label="Truth")
     for r in range(len(run_types)):
         frac_time = np.zeros((n_init*n_ens))
         for i in range(n_init):
             for m in range(n_ens):
                 # For each ensemble member, get proportion of time spent in regime
                 frac_time[int(i*n_ens + m)] = pred_regimes[r, i, m].mean(axis=-1)
-        print(frac_time)
-        ax.hist(frac_time, 
-            bins = np.arange(0.2, 0.8, 0.01),
-            alpha=0.5, lw=1,
-            label=label_names[r],
-            color=plotcolor(run_types[r]),
-            density=True)
+        if kde:
+            #X_domain = np.arange(0.3, 0.5, 0.0025)
+            pdf = kde_plot(frac_time, X_domain, bw=0.4)
+            ax.plot(X_domain, pdf, 
+                alpha=0.9, lw=1.5,
+                label=label_names[r],
+                color=plotcolor(run_types[r]) )
+            
+        else:
+            ax.hist(frac_time, 
+                bins = X_domain,
+                alpha=0.4, lw=1,
+                label=label_names[r],
+                color=plotcolor(run_types[r]),
+                density=True)
         mean_r = frac_time.mean()
         std_r = frac_time.std()
-        ax.axvline(mean_r, color=plotcolor(run_types[r]))
+        #ax.axvline(mean_r, color=plotcolor(run_types[r]), linestyle="dashed", alpha=0.5)
         #ax.axvline(mean_r-std_r, color=plotcolor(run_types[r]))
         #ax.axvline(mean_r+std_r, color=plotcolor(run_types[r]))
     if n_init > 1:
+        X_domain = np.arange(0.1, 0.8, 0.01)
+
         frac_time = true_regimes.mean(axis=-1)
-        ax.hist(frac_time, 
-            bins = np.arange(0.2, 0.8, 0.01),
-            alpha=.6, lw=1,
-            label="Truth",
-            color="black", 
-            #histtype="step",
-             density=True)
+        print(frac_time)
+        if kde:
+            print("Skip")
+        #    pdf = kde_plot(frac_time, X_domain)
+        #    ax.plot(X_domain, pdf, 
+        #            alpha=1.0, lw=2,
+        #            label="Truth",
+        #            color="black") 
+            
+        else:
+            ax.hist(frac_time, 
+                bins = X_domain,
+                alpha=1.0, lw=1.5,
+                label="Truth",
+                color="black", 
+                histtype="step",
+                density=True)
 
     plt.legend()
-    plt.xlabel("Fraction of time spent in regime $k=1$")
+    plt.xlabel("Ratio of time spent in regime $k=1$")
+    mtu = int(dt_f * T * save_step)
+    years = mtu_to_years(mtu)
+    print(years)
+    plt.title(f"{title} after T={mtu} MTU (~{years:.0f} Atmos. Years)")
+    plt.ylabel("Probability density function")
+    plt.axis(xmin=xmin, xmax=xmax)
+    plt.tight_layout()
 
-    plt.savefig(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist.png")
-    print(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist.png")
+
+    plt.savefig(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist_T{mtu}.png")
+    print(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist_T{mtu}.png")
 
 
 
@@ -137,7 +174,13 @@ if __name__ == "__main__":
     label_names = [ "Epistemic", "Aleatoric", "Both"]
     
     F=20
-    fnames = [f"climate_F{F}_run{i:02d}_X_dtf" for i in range(7)]
-    save_prefix = f"climate_F{F}_run00-06_"
+    fnames = [f"climate_F{F}_run{i:02d}_X_dtf" for i in range(10)]
+    save_prefix = f"climate_F{F}_run00-09_"
 
-    plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, save_prefix=save_prefix, fnames = fnames)
+    plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, 
+        save_prefix=save_prefix+"hist_", fnames = fnames, kde=False, save_step = 10,
+        T=20000, title = f"F={F}")
+
+    plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, 
+        save_prefix=save_prefix+"kde_", fnames = fnames, kde=True,  save_step = 10,
+        T=20000, title = f"F={F}")

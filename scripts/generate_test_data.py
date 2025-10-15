@@ -29,10 +29,6 @@ def generate_truth(params, test_params):
     # May wish to change F to run with different forcing 
     F = test_params['F']
 
-    save_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}/'
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-
     # Set up model
     lorenz_model = L96TwoLayer(X_0=X0, Y_0=Y0, F=F, c=c, b=b, h=h, dt=dt)
     print(f"Lorenz 1996 model initialized. Running for time={T}...")

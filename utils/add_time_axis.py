@@ -28,7 +28,7 @@ def add_axis(ax, mtu_ticks, new_ticks, xlabel='Time (~Atmospheric Days)'):
     plt.tight_layout()
 
 
-def add_axis_weather(ax, max_days = 15., step_days = 3.):
+def add_axis_weather(ax, max_days = 30., step_days = 3.):
     day_ticks = np.arange(0., max_days, step_days)
     mtu_ticks = days_to_mtu(day_ticks)
     add_axis(ax, mtu_ticks, day_ticks, xlabel='Time (~Atmospheric Days)')

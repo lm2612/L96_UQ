@@ -13,4 +13,6 @@ def kde_plot(X, X_domain=np.linspace(-25, 25, 80),  bw=0.15):
     X = X.flatten()
     kde = gaussian_kde(X, bw_method=bw)
     pdf = kde.pdf(X_domain)
+    pdf /= np.trapz(pdf, X_domain)
+
     return(pdf)

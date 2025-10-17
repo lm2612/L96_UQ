@@ -87,7 +87,18 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
 
 
     X_domain = np.arange(0.1, 0.8, 0.004)
+    ymin = 0.
+    ymax=80.
+    print(true_regimes[..., spinup:T].shape)
+    truth = true_regimes[..., spinup:T].mean(axis=-1)
+    mean_truth = truth.mean()
+    std_truth = truth.std()
+    print(mean_truth, std_truth)
     ax.axvline(true_regimes[..., spinup:T].mean(), color="k", linestyle="dashed", label="Truth")
+    ax.fill_betweenx(y=[ymin, ymax],
+        x1=[mean_truth - std_truth, mean_truth - std_truth], 
+        x2=[mean_truth + std_truth, mean_truth + std_truth],
+        color="k", alpha=0.1)
     for r in range(len(run_types)):
         frac_time = np.zeros((n_init*n_ens))
         for i in range(n_init):
@@ -111,9 +122,7 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
                 density=True)
         mean_r = frac_time.mean()
         std_r = frac_time.std()
-        #ax.axvline(mean_r, color=plotcolor(run_types[r]), linestyle="dashed", alpha=0.5)
-        #ax.axvline(mean_r-std_r, color=plotcolor(run_types[r]))
-        #ax.axvline(mean_r+std_r, color=plotcolor(run_types[r]))
+        
     if n_init > 1:
         X_domain = np.arange(0.1, 0.8, 0.01)
 
@@ -143,17 +152,15 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
     print(years)
     plt.title(f"{title} after T={mtu} MTU (~{years:.0f} Atmos. Years)")
     plt.ylabel("Probability density function")
-    plt.axis(xmin=xmin, xmax=xmax)
+    plt.axis(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     plt.tight_layout()
 
 
-    plt.savefig(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist_T{mtu}.png")
-    print(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist_T{mtu}.png")
+    plt.savefig(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist_T{mtu:04d}.png")
+    print(f"{plot_path}/{save_prefix}_frac_time_in_reg_hist_T{mtu:04d}.png")
+    plt.close()
 
 
-
-
-    
 
 if __name__ == "__main__":
     params ={
@@ -173,14 +180,14 @@ if __name__ == "__main__":
     run_types = ["epistemic_fix", "aleatoric_AR1", "both_fix_AR1"] #, "aleatoric",] # Or run_types = ["epistemic_fix", "aleatoric_AR1_", ...]
     label_names = [ "Epistemic", "Aleatoric", "Both"]
     
-    F=20
+    F=16
     fnames = [f"climate_F{F}_run{i:02d}_X_dtf" for i in range(10)]
     save_prefix = f"climate_F{F}_run00-09_"
 
     plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, 
         save_prefix=save_prefix+"hist_", fnames = fnames, kde=False, save_step = 10,
-        T=20000, title = f"F={F}")
+        T=2000, title = f"F={F}")
 
     plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, 
         save_prefix=save_prefix+"kde_", fnames = fnames, kde=True,  save_step = 10,
-        T=20000, title = f"F={F}")
+        T=2000, title = f"F={F}")

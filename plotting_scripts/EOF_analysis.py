@@ -34,12 +34,17 @@ pca = PCA(n_components=n_components)
 pca.fit(X_truth)
 
 # Save PCA object
-np.save(f"{data_path}/pca_fit.npy", pca)
+#np.save(f"{data_path}/pca_fit.npy", pca)
 print(f"saved as {data_path}/pca_fit.npy")
 
 print(pca.singular_values_.shape)
 print(pca.components_.shape)
-print(pca.explained_variance_ratio_.shape)
+print(pca.explained_variance_ratio_)
+print(pca.explained_variance_ratio_[0]+pca.explained_variance_ratio_[1])
+print(pca.explained_variance_ratio_[2]+pca.explained_variance_ratio_[3])
+print(pca.explained_variance_ratio_.sum())
+print((pca.explained_variance_ratio_[0]+pca.explained_variance_ratio_[1])/pca.explained_variance_ratio_.sum())
+print((pca.explained_variance_ratio_[2]+pca.explained_variance_ratio_[3])/pca.explained_variance_ratio_.sum())
 #plt.plot(np.arange(8),  pca.explained_variance_ratio_)
 
 fig, axs= plt.subplots(n_components//2, figsize=(6, 6))
@@ -96,18 +101,33 @@ plot_fname = f"{plot_path}/max_PC_1-4.png"
 plt.savefig(plot_fname)
 print(f"Saved to {plot_fname}")
 
+
 max_time = 20000
 truth_regimes = max_pc//2
 
 plt.clf()
-fig, ax = plt.subplots(1, figsize=(6, 3), sharex=True)
+fig, ax = plt.subplots(1, figsize=(8, 3), sharex=True)
 ax.plot(np.arange(NT), truth_regimes, color="black", label="Truth")
 plt.axis(xmin=0, xmax=5000, ymin = -0.5, ymax=1.5)
-plt.yticks([0, 1], ["PC1/PC2", "PC3/PC4"])
+plt.yticks([0, 1], ["k=2", "k=1"])
 plt.xlabel("Time")
 plt.ylabel("Max PC")
 plt.tight_layout()
 plot_fname = f"{plot_path}/max_PC_1-2.png"
 plt.savefig(plot_fname)
 print(f"Saved to {plot_fname}")
+plt.axis(xmin=0, xmax=500, ymin = -0.5, ymax=1.5)
+plot_fname = f"{plot_path}/wavenumbers.png"
+plt.ylabel("Regime")
+plt.savefig(plot_fname)
+print(f"Saved to {plot_fname}")
+ 
 
+
+truth_regimes = max_pc//2
+true_regime_wn1 = np.sum(truth_regimes==0)
+print(truth_regimes.shape)
+true_regime_tot = truth_regimes.shape[0]
+print(true_regime_wn1 / true_regime_tot)
+print(np.sum(truth_regimes==1) / true_regime_tot)
+print(truth_regimes.mean())

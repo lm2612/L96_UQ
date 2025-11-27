@@ -13,7 +13,7 @@ def mtu_to_days(t):
 def mtu_to_years(t):
     return t*5/360
 
-def add_axis(ax, mtu_ticks, new_ticks, xlabel='Time (~Atmospheric Days)'):
+def add_axis(ax, mtu_ticks, new_ticks, xlabel='Time (~Atmospheric Days)' , offset=36):
     ax2 = ax.twiny()
 
     ax2.set_xticks(mtu_ticks)
@@ -21,22 +21,27 @@ def add_axis(ax, mtu_ticks, new_ticks, xlabel='Time (~Atmospheric Days)'):
 
     ax2.xaxis.set_ticks_position('bottom') # set the position of the second x-axis to bottom
     ax2.xaxis.set_label_position('bottom') # set the position of the second x-axis to bottom
-    ax2.spines['bottom'].set_position(('outward', 36))
+    ax2.spines['bottom'].set_position(('outward', offset))
     ax2.set_xlabel(xlabel)
     ax2.set_xlim(ax.get_xlim())
 
     plt.tight_layout()
+    return ax2
 
 
-def add_axis_weather(ax, max_days = 30., step_days = 3.):
+def add_axis_weather(ax, max_days = 30., step_days = 3., 
+    xlabel='Time (~Atmospheric Days)', offset=36):
     day_ticks = np.arange(0., max_days, step_days)
     mtu_ticks = days_to_mtu(day_ticks)
-    add_axis(ax, mtu_ticks, day_ticks, xlabel='Time (~Atmospheric Days)')
+    ax2 = add_axis(ax, mtu_ticks, day_ticks, xlabel=xlabel, offset=offset)
+    return ax2
 
-def add_axis_climate(ax, max_years = 15, step_years = 5.):
+def add_axis_climate(ax, max_years = 15, step_years = 5., 
+    xlabel='Time (~Atmospheric Years)', offset=36):
     year_ticks = np.arange(0., max_years, step_years)
     mtu_ticks = years_to_mtu(year_ticks)
-    add_axis(ax, mtu_ticks, year_ticks, xlabel='Time (~Atmospheric Years)')
+    ax2 = add_axis(ax, mtu_ticks, year_ticks, xlabel=xlabel, offset=offset)
+    return ax2
 
 
 

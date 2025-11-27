@@ -30,7 +30,7 @@ test_params = { 'fname':'run00_X_dtf.npy',
                 'save_prefix':'',
                 'n_ens': 50,
                 'N_init': 1,
-                'save_step': 1,
+                'save_step': 10,
                 'run_type': 'epistemic',
                 'save_prefix': 'epistemic_fix_run00_',
                 'T':1000 ,
@@ -54,6 +54,7 @@ sigma = pyro.get_param_store()['sigma'].detach()
 
 for i in range(10):
     test_params['fname'] = f'run{i:02d}_X_dtf.npy'
+    test_params['n_ens'] = 50
 
     # Run Epistemic with fixed parameters - will sample guide parameters before each ensemble member
     parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = 0., phi=0.)
@@ -65,7 +66,7 @@ for i in range(10):
 
     # Run Both with fixed parameters - epistemic fixed and aleatoric sampled using AR1
     parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi)
-    param_sample=parameterisation_AR1.sample_guide_params
+    param_sample = parameterisation_AR1.sample_guide_params
     param_func = parameterisation_AR1.keep_epistemic_fixed
     test_params['runtype'] = 'both'
     test_params['save_prefix'] = f'both_fix_AR1_run{i:02d}_' 
@@ -76,6 +77,33 @@ for i in range(10):
     param_func = parameterisation_AR1.aleatoric_only
     test_params['runtype'] = 'aleatoric'
     test_params['save_prefix'] = f'aleatoric_AR1_run{i:02d}_' 
+    test(params, test_params, param_func)
+
+    # Epitemic
+    parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi, 
+        aleatoric=False, epistemic=True, N=2)
+    param_func = parameterisation_AR1.AR1_param
+    test_params['runtype'] = 'epistemic'
+    test_params['save_prefix'] = f'epistemic_AR1_run{i:02d}_' 
+    test(params, test_params, param_func)
+
+    # Both
+    parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi,
+        aleatoric=True, epistemic=True, N=2)
+    param_func = parameterisation_AR1.AR1_param
+    test_params['runtype'] = 'both'
+    test_params['save_prefix'] = f'both_AR1_run{i:02d}_' 
+    test(params, test_params, param_func)
+
+     # Deterministic - no uncertainty
+    fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())
+    def param_func(x):
+        with torch.no_grad():
+            mean = fixed_param_NN(x.unsqueeze(-1))
+        return mean.squeeze()
+    test_params['runtype'] = 'deterministic'
+    test_params['save_prefix'] = f'deterministic_run{i:02d}_' 
+    test_params['n_ens'] = 1
     test(params, test_params, param_func)
 
 

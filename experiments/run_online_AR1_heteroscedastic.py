@@ -28,7 +28,7 @@ test_params = { 'fname':'X_dtf.npy',
                 'save_model_path':'',
                 'save_prefix':'',
                 'n_ens': 50,
-                'N_init': 1,
+                'N_init': 100,
                 'save_step': 1,
                 'T':10 ,
                 'F':20                  }
@@ -57,7 +57,6 @@ test(params, test_params, param_func)
 # Run Aleatoric with AR1 - need to set up ParameterisationAR1 class with sigma from guide
 parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi)
 param_func = parameterisation_AR1.aleatoric_only
-
 test_params['runtype'] = 'aleatoric'
 test_params['save_prefix'] = 'aleatoric_AR1_' 
 test(params, test_params, param_func)
@@ -73,7 +72,6 @@ test(params, test_params, param_func)
 parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, include_sigma = False, phi=0.)
 param_sample=parameterisation_AR1.sample_guide_params
 param_func = parameterisation_AR1.keep_epistemic_fixed
-
 test_params['runtype'] = 'epistemic'
 test_params['save_prefix'] = 'epistemic_fix_' 
 test(params, test_params, param_func, param_sample=param_sample)
@@ -82,7 +80,18 @@ test(params, test_params, param_func, param_sample=param_sample)
 parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, include_sigma=True, phi=phi)
 param_sample=parameterisation_AR1.sample_guide_params
 param_func = parameterisation_AR1.keep_epistemic_fixed
-
 test_params['runtype'] = 'both'
 test_params['save_prefix'] = 'both_fix_AR1_' 
 test(params, test_params, param_func, param_sample=param_sample)
+
+parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi, aleatoric=False, epistemic=True, N=10)
+param_func = parameterisation_AR1.AR1_param
+test_params['runtype'] = 'epistemic'
+test_params['save_prefix'] = 'new_epistemic_AR1_' 
+test(params, test_params, param_func)
+
+parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi, aleatoric=True, epistemic=True, N=10)
+param_func = parameterisation_AR1.AR1_param
+test_params['runtype'] = 'both'
+test_params['save_prefix'] = 'new_both_AR1_' 
+test(params, test_params, param_func)

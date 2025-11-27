@@ -28,7 +28,7 @@ test_params = { 'fname':'X_dtf.npy',
                 'save_model_path':'',
                 'save_prefix':'',
                 'n_ens': 50,
-                'N_init': 100,
+                'N_init': 1,
                 'save_step': 1,
                 'T':10 ,
                 'F':20                  }
@@ -52,7 +52,7 @@ parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = 0., phi=ph
 param_func = parameterisation_AR1.epistemic_AR1
 test_params['runtype'] = 'epistemic'
 test_params['save_prefix'] = 'epistemic_AR1_' 
-test(params, test_params, param_func)
+#test(params, test_params, param_func)
 
 # Run Aleatoric with AR1 - need to set up ParameterisationAR1 class with sigma from guide
 sigma = pyro.get_param_store()['sigma'].detach()
@@ -63,26 +63,16 @@ test_params['runtype'] = 'aleatoric'
 test_params['save_prefix'] = 'aleatoric_AR1_' 
 test(params, test_params, param_func)
 
-# Run both types of uncertainty, both treated as AR1
-param_func = parameterisation_AR1.epistemic_AR1
-test_params['runtype'] = 'both'
-test_params['save_prefix'] = 'both_AR1_' 
+parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi, 
+    aleatoric=False, epistemic=True, N=10)
+param_func = parameterisation_AR1.AR1_param
+test_params['runtype'] = 'epistemic'
+test_params['save_prefix'] = 'new_epistemic_AR1_' 
 test(params, test_params, param_func)
 
-# Run Epistemic with fixed parameters - will sample guide parameters before each ensemble member
-parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = 0., phi=0.)
-param_sample=parameterisation_AR1.sample_guide_params
-param_func = parameterisation_AR1.keep_epistemic_fixed
-
-test_params['runtype'] = 'epistemic'
-test_params['save_prefix'] = 'epistemic_fix_' 
-test(params, test_params, param_func, param_sample=param_sample)
-
-# Run Both with fixed parameters - epistemic fixed and aleatoric sampled using AR1
-parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi)
-param_sample=parameterisation_AR1.sample_guide_params
-param_func = parameterisation_AR1.keep_epistemic_fixed
-
+parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi, 
+    aleatoric=True, epistemic=True, N=10)
+param_func = parameterisation_AR1.AR1_param
 test_params['runtype'] = 'both'
-test_params['save_prefix'] = 'both_fix_AR1_' 
-test(params, test_params, param_func, param_sample=param_sample)
+test_params['save_prefix'] = 'new_both_AR1_' 
+test(params, test_params, param_func)

@@ -67,7 +67,7 @@ for F_test in F_tests:
         test_params['runtype'] = 'deterministic'
         test_params['save_prefix'] = f'deterministic_climate_F{F_test}_run{i:02d}_' 
         test_params['n_ens'] = 1
-        #test(params, test_params, param_func)
+        test(params, test_params, param_func)
         
         test_params['n_ens'] = 50
 
@@ -76,7 +76,7 @@ for F_test in F_tests:
         param_func = parameterisation_AR1.aleatoric_only
         test_params['runtype'] = 'aleatoric'
         test_params['save_prefix'] = f'aleatoric_AR1_climate_F{F_test}_run{i:02d}_' 
-        #test(params, test_params, param_func)
+        test(params, test_params, param_func)
 
 
         # Run Epistemic with fixed parameters - will sample guide parameters before each ensemble member
@@ -96,6 +96,13 @@ for F_test in F_tests:
 
         # Run Both with fixed parameters - epistemic fixed and aleatoric sampled using AR1
         parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, include_sigma=True, phi=phi)
+        def param_sample(n):
+            """ Set up parameterisation for ensemble member n """
+            # Open file
+            fixed_nn_model = torch.load(f"{model_path}/fixed_param_model_{n}.pt", weights_only=False)
+            # Update in parameterisation_AR1
+            parameterisation_AR1.fixed_param_NN = fixed_nn_model
+        param_func = parameterisation_AR1.keep_epistemic_fixed
         
         test_params['runtype'] = 'both'
         test_params['save_prefix'] = f'both_fix_AR1_climate_F{F_test}_run{i:02d}_' 
@@ -105,10 +112,10 @@ for F_test in F_tests:
         param_func = parameterisation_AR1.AR1_param
         test_params['runtype'] = 'epistemic'
         test_params['save_prefix'] = f'epistemic_AR1_climate_F{F_test}_run{i:02d}_' 
-        #test(params, test_params, param_func)
+        test(params, test_params, param_func)
 
         parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi, aleatoric=True, epistemic=True, N=2)
         param_func = parameterisation_AR1.AR1_param
         test_params['runtype'] = 'both'
         test_params['save_prefix'] = f'both_AR1_climate_F{F_test}_run{i:02d}_' 
-        #test(params, test_params, param_func)
+        test(params, test_params, param_func)

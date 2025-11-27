@@ -11,9 +11,13 @@ import functools
 def plot_polar(X, ax=None):
     """ Plots the Lorenz-96 variables on a polar axis """
     if isinstance(X, tuple):
-        X, Y = X
+        if len(X) == 2:
+            t, X = X
+            Y = None
+        elif len(X) == 3:
+            t, X, Y = X
     else:
-        Y = None
+        t, Y = None, None
     if ax is None:
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
     # Clear axis
@@ -41,7 +45,36 @@ def plot_polar(X, ax=None):
     ax.set_axis_off()
     return ax
 
-def plot_data_gif(params, model_name="", fname_X="X_dtf", fname_Y=None):
+## Plot Lorenz data on cartesian axis
+def plot_cartesian(X, ax=None):
+    """ Plots the Lorenz-96 variables on a cartesian axis """
+    if isinstance(X, tuple):
+        if len(X) == 2:
+            t, X = X
+            Y = None
+        elif len(X) == 3:
+            t, X, Y = X
+    else:
+        t, Y = None, None
+    if ax is None:
+        fig, ax = plt.subplots()
+    # Clear axis
+    ax.clear()
+    # Plot X
+    theta = np.arange(0, X.shape[0])
+    ax.plot(theta, X, color="black", lw=2 )
+    if Y is not None:
+        # Plot Y
+        theta = np.linspace(0, X.shape[0], Y.shape[0])
+        ax.plot(theta, Y, color="blue", lw=2)
+    plt.axis(ymin=-10, ymax=15)
+    if t is not None:
+        plt.title(f"T={t}")
+    return ax
+
+
+def plot_data_gif(params, model_name="", fname_X="X_dtf", fname_Y=None, T=1000, save_prefix="", 
+    plot_fn = plot_polar):
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
     seed = 123
@@ -58,28 +91,35 @@ def plot_data_gif(params, model_name="", fname_X="X_dtf", fname_Y=None):
     n_time = X_truth.shape[0]
 
     plt.clf()
-    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    if plot_fn == plot_polar:
+        fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    else:
+        fig, ax = plt.subplots(figsize=(8, 3))
     # Create frames
-    frames = [(X_truth[t]) for t in range(0, 1000, 1)]
+    frames = [(t, X_truth[t]) for t in range(0, T, 1)]
+
     # Create animation
-    anim = FuncAnimation(fig, functools.partial(plot_polar, ax=ax), 
+    anim = FuncAnimation(fig, functools.partial(plot_fn, ax=ax), 
                         frames=frames, interval=100, blit=False)
-    anim.save(f"{plot_path}/lorenz96_Xonly.gif") #, writer='imagemagick'
-    print(f"Saved animation to {plot_path}/lorenz96_Xonly.gif")
+    anim.save(f"{plot_path}/{save_prefix}lorenz96_Xonly.gif") #, writer='imagemagick'
+    print(f"Saved animation to {plot_path}/{save_prefix}lorenz96_Xonly.gif")
 
 
     if fname_Y is not None:
         Y_truth = np.load(f"{data_path}/{fname_Y}.npy")
 
         plt.clf()
-        fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        if plot_fn == plot_polar:
+            fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        else:
+            fig, ax = plt.subplots()     
         # Create frames
-        frames = [(X_truth[t], Y_truth[t]) for t in range(0, 1000, 1)]
+        frames = [(t, X_truth[t], Y_truth[t]) for t in range(0, T, 1)]
         # Create animation
-        anim = FuncAnimation(fig, functools.partial(plot_polar, ax=ax), 
+        anim = FuncAnimation(fig, functools.partial(plot_fn, ax=ax), 
                             frames=frames, interval=100, blit=False)
-        anim.save(f"{plot_path}/lorenz96_X_Yy.gif") #, writer='imagemagick'
-        print(f"Saved animation to {plot_path}/lorenz96_X_Y.gif")
+        anim.save(f"{plot_path}/{save_prefix}lorenz96_X_Y.gif") #, writer='imagemagick'
+        print(f"Saved animation to {plot_path}/{save_prefix}lorenz96_X_Y.gif")
 
 
 if __name__ == "__main__":
@@ -94,4 +134,5 @@ if __name__ == "__main__":
         'dt_f': 0.005,
     }
 
-    plot_data_gif(params)
+    plot_data_gif(params)    
+    plot_data_gif(params, fname_Y="Y_dtf")    

@@ -15,4 +15,5 @@ def plotcolor(name):
         return "pink"
     elif "Aleatoric" in name:
         return "darkgoldenrod"
+
     

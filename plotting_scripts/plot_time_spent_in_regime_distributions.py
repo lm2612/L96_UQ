@@ -10,8 +10,7 @@ from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import mtu_to_years
 from utils.kde_plot import kde_plot
 
-
-def plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, 
+def plot_num_transitions(params, model_name, run_types, label_names, 
     save_prefix="", fnames=["X_dtf"],  det=False, save_step=1, kde=False, xmin=0.2, xmax=0.8, 
     T=-1, spinup=0, title=""):
     """Climate predictions"""
@@ -34,7 +33,6 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
     X_truth = X_truth[:, ::save_step, :]
     print(X_truth.shape)
 
-    
     # Load ml param model results - must all be same size
     X_mls = np.stack([[np.load(f'{model_path}/{run_type}_{fname}.npy') for fname in fnames] for run_type in run_types])
     print(X_mls.shape)
@@ -51,12 +49,6 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
     max_pc = np.argmax(X_transformed, axis=2)
     print(max_pc)
     true_regimes = max_pc//2
-    true_regime_wn1 = np.sum(true_regimes==0)
-    true_regime_tot = true_regimes.shape[0]*true_regimes.shape[1]
-    print(true_regime_wn1 / true_regime_tot)
-    print(np.sum(true_regimes==1) / true_regime_tot)
-    print(true_regimes.mean())
-    print(true_regimes.shape, X_mls.shape)
 
     pred_regimes = []
     n_ens = 50
@@ -86,11 +78,21 @@ def plot_regime_uncertainty_distributions(params, model_name, run_types, label_n
     fig, ax = plt.subplots(1, figsize=(6, 2.5))
 
 
-    X_domain = np.arange(0.1, 0.8, 0.004)
-    ymin = 0.
-    ymax=80.
-    print(true_regimes[..., spinup:T].shape)
-    truth = true_regimes[..., spinup:T].mean(axis=-1)
+
+
+    num_transitions_truth = np.sum(np.abs(np.diff(true_regimes[..., spinup:T], axis=-1)), axis=-1)
+    num_transitions_pred = np.sum(np.abs(np.diff(pred_regimes[..., spinup:T], axis=-1)), axis=-1)
+    print(num_transitions_truth)
+    print(np.min(num_transitions_pred, axis=(1,2)))
+    
+   
+    
+
+
+    exit()
+
+
+
     mean_truth = truth.mean()
     std_truth = truth.std()
     print(mean_truth, std_truth)
@@ -199,6 +201,6 @@ if __name__ == "__main__":
     fnames = [f"climate_F{F}_run{i:02d}_X_dtf" for i in range(10)]
     save_prefix = f"climate_F{F}_run00-09_"
 
-    plot_regime_uncertainty_distributions(params, model_name, run_types, label_names, 
+    plot_num_transitions(params, model_name, run_types, label_names, 
         save_prefix=save_prefix+"kde_", fnames = fnames, kde=True,  save_step = 10,
-        T=10000, title = f"F={F}", det=True)
+        T=20000, title = f"F={F}", det=True)

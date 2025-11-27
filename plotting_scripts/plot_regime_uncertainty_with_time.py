@@ -182,7 +182,6 @@ def plot_regime_uncertainty_time(params, model_name, run_types, label_names,
     print(f"{plot_path}/{save_prefix}fractional_uncertainty.png")
     
 
-
 if __name__ == "__main__":
     params ={
         'F': 20,
@@ -197,7 +196,7 @@ if __name__ == "__main__":
 
     # Set up model and types of simulations to plot
     N_train = 50
-    model_name = f"BayesianNN_16_16_N{N_train}"
+    model_name = f"BayesianNN_Heteroscedastic_16_16_N100"
     run_types = ["epistemic_fix", "aleatoric_AR1", "both_fix_AR1"] #, "aleatoric",] # Or run_types = ["epistemic_fix", "aleatoric_AR1_", ...]
     label_names = [ "Epistemic", "Aleatoric", "Both"]
     save_prefix = ""

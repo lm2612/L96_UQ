@@ -12,7 +12,7 @@ from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import mtu_to_years, mtu_to_days, add_axis_climate, add_axis_weather
 from utils.kde_plot import kde_plot
 
-plt.rcParams.update({'font.size': 6})
+plt.rcParams.update({'font.size': 14})
 
 def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_types_climate, label_names, 
     save_prefix="", fnames_climate=["X_dtf"], save_step=1,
@@ -35,14 +35,7 @@ def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_typ
     print(quantiles, len(quantiles))
 
     #fig, ax = plt.subplots(1, figsize=(10, 6))
-    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-
-    # Dimensions in inches (mm / 25.4)
-    height_in = 35 / 25.4
-    width_in = 60 / 25.4
-
-    # Create figure
-    fig, axs = plt.subplots(1, 2, figsize=(width_in, height_in), dpi=1500)
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5), dpi=1500)
 
 
 
@@ -104,7 +97,7 @@ def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_typ
         print(X_mean_reshaped.shape)
         print(X_plot.shape, X_mean_r.shape)
         ax_weather.plot(timeseries_mtu, X_m + X_mean_m,    
-                alpha=0.9, lw=.5,
+                alpha=0.9, lw=2,
                 label=label_names[r],
                 color=plotcolor(run_types_weather[r]), zorder = zorder_weather[r])
         """
@@ -119,7 +112,7 @@ def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_typ
                 y1=
                 X_q[ -(j+1)] + X_mean_m,
                 y2= (X_q[j] + X_mean_m) ,
-                lw =.25,
+                lw = 1,
                 color=plotcolor(run_types_weather[r]), alpha=0.5,
                 zorder = zorder_weather[r])
        
@@ -141,29 +134,25 @@ def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_typ
     plt.xticks([0, 1, 2])
     plt.yticks([0, 2, 4, 6, 8])
 
-    leg = ax_weather.legend(loc="upper left", fontsize=6,
-        frameon=True, 
-        bbox_to_anchor=(-0.1, 1.1)   ,
-        )
-    # Adjust legend frame linewidth
-    leg.get_frame().set_linewidth(0.5)
+    ax_weather.legend(loc="upper left", fontsize=16)
     #plt.xlabel("Distance of ensemble members from ensemble mean")
     #plt.title(f"Weather PDF. (T={mtu:.1f} MTU, ~{days:.0f} Atmos. Days)")
     #plt.xlabel("Probability density function")
     #plt.axis(ymin=xmin, ymax=xmax) #, ymin=ymin, ymax=ymax)
-    plt.axis(ymin = 0, ymax=9)
+    plt.axis(ymin = 0, ymax=8)
     plt.tight_layout()
     plt.axis("off")
 
-    plt.title(f"Weather", fontsize=8)
+    plt.title(f"Weather Timescales", fontsize=16)
     
         
-    ax2 = add_axis_weather(ax_weather, max_days=10, step_days=5, xlabel="Time (~Days)", offset=0)
+    ax2 = add_axis_weather(ax_weather, max_days=10, step_days=5)
     ax2.spines['top'].set_visible(False)
     ax2.spines['right'].set_visible(False)
+    #ax_weather.spines['bottom'].set_visible(False)
     ax2.spines['left'].set_visible(False)
-    ax2.plot(1, 0., ">k", transform=ax2.get_yaxis_transform(), 
-        clip_on=False, markersize=3)
+    ax2.plot(1, -1.23, ">k", transform=ax2.get_yaxis_transform(), 
+        clip_on=False, markersize=10)
 
 
 
@@ -250,14 +239,14 @@ def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_typ
             pred_std[t] = pred.std()
             pred_quantiles[t] = np.quantile(pred, quantiles)
         ax_climate.plot(T_mtu, pred_mean, color=plotcolor(run_types_climate[r]), 
-            alpha=0.9, lw=.5, label=label_names[r], zorder = zorder_climate[r])
+            alpha=0.9, lw=2, label=label_names[r], zorder = zorder_climate[r])
         print("Q", len(quantiles)//2)
         for j in range(len(quantiles)//2):
             print(j, (j+1)*0.1)
             ax_climate.fill_between(T_mtu, 
                 y1=pred_quantiles[:, -(j+1)],
                 y2= pred_quantiles[:, j] ,
-                lw = .25,
+                lw = 1,
                 color=plotcolor(run_types_climate[r]), alpha=0.5,
                 zorder = zorder_climate[r])
         
@@ -270,7 +259,7 @@ def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_typ
     years = mtu_to_years(mtu)
     print(mtu, years)
     
-    plt.title(f"Climate" , fontsize=8)
+    plt.title(f"Climate Timescales" , fontsize=16)
     plt.yticks([0.3, 0.35, 0.4, 0.45])
 
     #plt.title(f"Climate PDF. (T={mtu} MTU, ~{years:.0f} Atmos. Years)")
@@ -281,17 +270,17 @@ def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_typ
     plt.tight_layout()
 
 
-    ax2 = add_axis_climate(ax_climate, xlabel="Time (~Years)", offset=0) 
+    ax2 = add_axis_climate(ax_climate) 
     ax2.spines['top'].set_visible(False)
     ax2.spines['right'].set_visible(False)
     ax2.spines['left'].set_visible(False)
-    ax2.plot(1, 0.28, ">k", transform=ax2.get_yaxis_transform(), 
-        clip_on=False, markersize=3)
+    ax2.plot(1, 0.24999, ">k", transform=ax2.get_yaxis_transform(), 
+        clip_on=False, markersize=10)
 
 
 
-    plt.savefig(f"{plot_path}/GRAPHICAL_ABSTRACT.tif", dpi=1500)
-    print(f"{plot_path}/GRAPHICAL_ABSTRACT.tif")
+    plt.savefig(f"{plot_path}/graphical_abstract_shading.png", dpi=1500)
+    print(f"{plot_path}/graphical_abstract_shading.png")
     plt.close()
 
 

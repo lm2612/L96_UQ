@@ -10,7 +10,7 @@ from pyro.nn import PyroModule, PyroSample
 
 from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, AutoLowRankMultivariateNormal
 
-from ml_models.BayesianModels import BayesianNN, BayesianLinearRegression
+from ml_models.BayesianModels import BayesianNN, BayesianNN_Heteroscedastic
 from scripts.train_bayesian import bayesian_train
 
 params ={
@@ -32,15 +32,15 @@ training_params = {
     'num_iterations' : 10000 ,
 }
 
-for N_train in [20, 40, 60, 80, 120, 140, 160, 180]:
+for N_train in [10, 20, 40, 60, 80, 120, 140, 160, 180]:
     training_params['N_train'] = N_train
     seed = 123
     np.random.seed(seed)
     torch.manual_seed(seed)
 
 
-    model_name =  f"BayesianNN_16_16_N{N_train}"      # Choose LinearRegression or NN 
-    model = BayesianNN(1, 1, [16, 16]) 
+    model_name =  f"BayesianNN_Heteroscedastic_16_16_N{N_train}"      # Choose LinearRegression or NN 
+    model = BayesianNN_Heteroscedastic(1, 1, [16, 16]) 
     guide = AutoMultivariateNormal(model)
 
     bayesian_train(params, training_params, model_name, model, guide)

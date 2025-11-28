@@ -15,33 +15,35 @@ Aleatoric and epistemic uncertainties over time on weather and climate timescale
 
 ### Project Directory Overview
 
-L96/
-Core implementation of the Lorenz-96 dynamical system, including the model equations and numerical integration methods.
+**`L96/`**  
+Core implementation of the Lorenz–96 dynamical system, including model equations and numerical integration methods.
 
-tests/
-Unit tests for verifying correctness of the core Lorenz-96 model and related utilities.
+**`ml_models/`**  
+PyTorch and Pyro implementations of neural network and Bayesian neural network parameterisations.
 
-ml_models/
-PyTorch and Pyro models for neural network and Bayesian neural network parameterisations.
+**`scripts/`**  
+Reusable functions for generating training data, training ML models, and running the L96 system coupled to parameterisations under different sampling methods.
 
-scripts/
-Reusable functions used for generating training data, training ML models and running L96 once coupled to parameterisation with different sampling methods.
+**`experiments/`**  
+High-level scripts used to execute full experiment pipelines: data generation, ML model training, and coupled model simulations.
 
-experiments/
-Runs scripts to generate data, train ML models, and run coupled models. 
+**`plotting_scripts/`**  
+Reusable plotting functions for analysis, including error trajectories, spread–skill plots, probability distribution functions, and animations.
 
-plotting_scripts/
-Reusable functions to create custom plots for analysis, including error trajectories, spread-skill plots, probability distribution functions, and animations.
+**`create_plots/`**  
+High-level scripts that generate the plots and visualisations used in analysis, papers, and presentations.
 
-create_plots/
-Collection of scripts that generate all plots and visualizations used in analysis, the paper and presentations.
+**`utils/`**  
+General-purpose helper functions for metrics, probability scoring, file operations, data transformations, and plotting support.
 
-utils/
-General purpose utility functions for metrics, probability scoring, plotting helpers, file concatenation, and data transformation.
+**`tests/`**  
+Unit tests validating the Lorenz–96 model components and associated utilities.
+
 
 ## Authors
 
-Laura Mansfield (primary developer) and Hannah Christensen
+Laura A. Mansfield (primary developer) and Hannah M. Christensen.
+
 Email: laura.mansfield@physics.ac.uk
 
 

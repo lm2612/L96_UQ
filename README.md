@@ -9,7 +9,7 @@ compare how epistemic and aleatoric uncertainty evolve over weather and climate 
 
 ### Summary 
 
-![Uncertainties on Weather/Climate Timescales](assets/GRAPHICAL_ABSTRACT.tif)
+![Uncertainties on Weather/Climate Timescales](assets/graphical_abstract.png)
 
 Aleatoric and epistemic uncertainties over time on weather and climate timescales, estimated through ensembles that sample aleatoric and epistemic uncertainty using Bayesian neural networks for parameterisations in the Lorenz 1996 model. The spread shows the 16th and 84th percentiles. For weather, we show divergence of large-scale variables from the ensemble mean, where aleatoric uncertainty from subgrid v   ariability dominates. For climate, we show the ratio of time spent in one weather regime, where epistemic uncertainty is the dominant source of uncertainty.
 

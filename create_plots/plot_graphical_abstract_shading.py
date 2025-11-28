@@ -14,7 +14,7 @@ from utils.kde_plot import kde_plot
 
 plt.rcParams.update({'font.size': 14})
 
-def plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_types_climate, label_names, 
+def plot_weather_vs_climate_graphical(params, model_name, run_types_weather, run_types_climate, label_names, 
     save_prefix="", fnames_climate=["X_dtf"], save_step=1,
     T_climate=100, spinup=0,
     zorder_weather = [1,2,3], zorder_climate=[1,2,3]):
@@ -312,6 +312,6 @@ if __name__ == "__main__":
     zorder_climate = [5, 10, 1]
 
 
-    plot_weather_vs_climate_dists(params, model_name, run_types_weather, run_types_climate, 
+    plot_weather_vs_climate_graphical(params, model_name, run_types_weather, run_types_climate, 
         label_names,  fnames_climate = fnames_climate, save_step = 10, T_climate=4000, 
         zorder_weather=zorder_weather, zorder_climate=zorder_climate)

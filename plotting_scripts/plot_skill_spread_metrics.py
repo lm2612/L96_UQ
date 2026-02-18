@@ -105,17 +105,5 @@ def plot_spread_v_skill(params, model_name, run_types, label_names,
         plt.savefig(f"{plot_path}/{save_prefix}spread_v_sigma_err_{t:03d}.png")
         print(f"Saved to {plot_path}/{save_prefix}spread_v_sigma_err_{t:03d}.png")    
 
-# Set up parameters for simulation
-params ={
-    'F': 20,
-    'c': 10,
-    'b': 10,
-    'h': 1,
-    'J': 32,
-    'K': 8,
-    'dt': 0.001,
-    'dt_f': 0.005,
-}
-
 
 

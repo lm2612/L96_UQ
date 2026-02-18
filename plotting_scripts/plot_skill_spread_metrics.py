@@ -117,19 +117,5 @@ params ={
     'dt_f': 0.005,
 }
 
-# Set up model and types of simulations to plot
-model_name = f"BayesianNN_Heteroscedastic_16_16_N100"
-run_types = ["aleatoric", "epistemic", "both"] 
-label_names = ["Aleatoric (indep.)", "Epistemic (indep.)", "Both (indep.)"]
-save_prefix = "test_Indep_"
 
-plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
-    num_plots = 40, ylim=10, samples_per_bin=100)
-
-run_types = ["aleatoric_AR1", "new_epistemic_AR1", "new_both_AR1"] 
-label_names = ["Aleatoric (AR1)", "Epistemic (AR1)", "Both (AR1)"]
-save_prefix = "test_AR1_"
-
-plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
-    num_plots = 40, ylim=10., samples_per_bin=100)
 

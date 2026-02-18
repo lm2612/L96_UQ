@@ -12,7 +12,8 @@ from utils.kde_plot import kde_plot
 from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_weather
 
-def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix="", ylim=3, samples_per_bin=25):
+def plot_spread_v_skill(params, model_name, run_types, label_names, 
+    save_prefix="", ylim=3, samples_per_bin=25, num_plots=40):
     """Plots spread skill metrics """
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -39,19 +40,20 @@ def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=
     N_init = X_mls.shape[2] // nt
     time = np.arange(0, T, dt_f)
     X_mls = X_mls.reshape((len(filenames), n_ens, N_init, nt, K))
+    
     # truth
     N_init_truth = X_truth.shape[0] // nt 
     X_truth = X_truth.reshape(((N_init_truth, nt, K)))[:N_init]
 
-    # Compute mean and var across ensemble (axis=1)
+    # Compute mean and std across ensemble (axis=1)    
     X_mean = X_mls.mean(axis=1)
-    X_var = X_mls.var(axis=1)
+    X_std = X_mls.std(axis=1)
 
-    X_diff = (X_mean - X_truth)**2
+    X_diff = (X_mean - X_truth)
 
     print(X_diff.shape, X_mean.shape)
 
-    timesteps = np.linspace(dt_f, 1.5/dt_f, 40)
+    timesteps = np.linspace(dt_f, 2.0/dt_f, num_plots)
 
     for t in timesteps:
         t = int(t)
@@ -68,20 +70,25 @@ def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=
             
             # Flatten to combine N_init initial conditions and K dimensions 
             X_diff_rt = X_diff[r, :, t].flatten()
-            X_var_rt = X_var[r, :, t].flatten()
-            
-            # Sort into order of increasing spread
-            sorted_inds = np.argsort(X_var_rt.flatten())
-            X_diff_sorted = X_diff_rt[sorted_inds]
-            X_var_sorted = X_var_rt[sorted_inds]
+            X_std_rt = X_std[r, :, t].flatten()
 
+            # Sort into order of increasing spread
+            sorted_inds = np.argsort(X_std_rt.flatten())
+            X_diff_sorted = X_diff_rt[sorted_inds]
+            X_std_sorted = X_std_rt[sorted_inds]
+            
             # Reshape into bins
             X_diff_bins = X_diff_sorted.reshape((n_bins, samples_per_bin))
-            X_var_bins = X_var_sorted.reshape((n_bins, samples_per_bin))
+            X_std_bins = X_std_sorted.reshape((n_bins, samples_per_bin))
 
             # Average across variances and take std of err
-            spread = np.sqrt(X_var_bins.mean(axis=-1))
-            sigma_err = np.sqrt(X_diff_bins.var(axis=-1))
+            ## 1) the standard deviation of the ensemble for each bin:
+            spread = X_std_bins.mean(axis=-1)
+            
+            ## 2) the standard deviation of the ensemble mean error for each bin 
+            # Note, Leutbecher says we can approximate std with RMS error of the ensemble mean as proxy
+            #igma_err = X_diff_bins.std(axis=-1)
+            sigma_err = np.sqrt((X_diff_bins**2).mean(axis=-1))
 
             plt.scatter(spread, sigma_err, 
                 color=plotcolor(run_types[r]),
@@ -97,3 +104,32 @@ def plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=
 
         plt.savefig(f"{plot_path}/{save_prefix}spread_v_sigma_err_{t:03d}.png")
         print(f"Saved to {plot_path}/{save_prefix}spread_v_sigma_err_{t:03d}.png")    
+
+# Set up parameters for simulation
+params ={
+    'F': 20,
+    'c': 10,
+    'b': 10,
+    'h': 1,
+    'J': 32,
+    'K': 8,
+    'dt': 0.001,
+    'dt_f': 0.005,
+}
+
+# Set up model and types of simulations to plot
+model_name = f"BayesianNN_Heteroscedastic_16_16_N100"
+run_types = ["aleatoric", "epistemic", "both"] 
+label_names = ["Aleatoric (indep.)", "Epistemic (indep.)", "Both (indep.)"]
+save_prefix = "test_Indep_"
+
+plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
+    num_plots = 40, ylim=10, samples_per_bin=100)
+
+run_types = ["aleatoric_AR1", "new_epistemic_AR1", "new_both_AR1"] 
+label_names = ["Aleatoric (AR1)", "Epistemic (AR1)", "Both (AR1)"]
+save_prefix = "test_AR1_"
+
+plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
+    num_plots = 40, ylim=10., samples_per_bin=100)
+

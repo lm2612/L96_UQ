@@ -1,6 +1,8 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import OrderedDict
+
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
@@ -21,7 +23,7 @@ def plot_inputs_outputs(params, training_params, model_name,
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f,  = params['dt'], params['dt_f']
     N_train = training_params['N_train']
-    batch_size, lr, num_iterations = training_params['batch_size'],  training_params['lr'],  training_params['num_iterations']
+    training_method = training_params['training_method']
 
     # Set up directory
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
@@ -52,11 +54,38 @@ def plot_inputs_outputs(params, training_params, model_name,
     X_torch = torch.tensor(features, dtype=torch.float32).reshape((-1, 1))
     Y_torch = torch.tensor(targets, dtype=torch.float32).reshape((-1, 1))
 
-    # Plot and save best NN so far - first load these from saved file
-    output_dicts = torch.load(f"{save_model_path}/model_best.pt")
-    model = output_dicts["model"]
-    guide = output_dicts["guide"]
-    pyro.get_param_store().load( f"{save_model_path}/pyro_best_params.pt")
+    # Plot and save BNN results - first load these from saved file
+    if training_method == "mcmc":
+        # Assume variational inference
+        kernel_name = training_params["kernel_name"]
+        output_dicts = torch.load(f"{save_model_path}/mcmc_{kernel_name}_predictive.pt")
+        model = output_dicts["model"]
+        predictive = output_dicts["predictive"]
+        posterior_samples = output_dicts["samples"]
+        training_method = training_method + "_" + kernel_name
+        #num_samples = training_params["num_samples"]
+        print(f"{training_method}, num samples {num_samples}")
+        posterior_samples = OrderedDict( (k, v[:num_samples]) for k, v in posterior_samples.items())
+
+    else:
+        # Assume variational inference
+        output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+        model = output_dicts["model"]
+        guide = output_dicts["guide"]
+        pyro.get_param_store().load( f"{save_model_path}/pyro_best_params.pt")
+
+        # Generate posterior samples for deterministic prediction (mean/median)
+        num_samples = 1000
+        sample_dicts = [guide() for _ in range(num_samples)]  # list of OrderedDicts
+
+        # Stack each parameter: shape becomes (num_samples, *param_shape)
+        posterior_samples = OrderedDict( (k, torch.stack([sd[k] for sd in sample_dicts], dim=0))
+            for k in sample_dicts[0].keys()
+        )
+        # Prepare predictive
+        num_samples = 1000
+        predictive = Predictive(model, guide=guide, num_samples=num_samples,
+                            return_sites=("obs", "_RETURN"))
 
     # Set up plot
     plt.clf()
@@ -74,18 +103,24 @@ def plot_inputs_outputs(params, training_params, model_name,
     plt.savefig(f"{save_model_path}/data.png")
     print(f"{save_model_path}/data.png")
 
-    # Deterministic prediction 
-    fixed_param_NN = model.get_fixed_param_NN(guide.median())
-    fixed_param_NN.eval()
-    det_pred = fixed_param_NN(X_domain).detach()
+    
+    mean_guide = OrderedDict( (k, v.mean(dim=0)) for k, v in posterior_samples.items())
+    median_guide = OrderedDict( (k, v.median(dim=0)[0]) for k, v in posterior_samples.items())
+    fixed_param_NN = model.get_fixed_param_NN(median_guide)
+    median_fixed_param_NN = fixed_param_NN
+    median_fixed_param_NN.eval()
+    det_pred_median = median_fixed_param_NN(X_domain).detach()
+    median_pred = det_pred_median[:, 0]
+     
+    plt.plot(X_domain.squeeze(), median_pred, color="k", linestyle="dashed", linewidth=2, label="median")
+    mean_fixed_param_NN = model.get_fixed_param_NN(mean_guide)
+    mean_fixed_param_NN.eval()
+    det_pred = mean_fixed_param_NN(X_domain).detach()
     mean_pred = det_pred[:, 0]
-    plt.plot(X_domain.squeeze(), mean_pred, color="k", linewidth=2, label="mean")
-    plt.savefig(f"{save_model_path}/offline_deterministic.png")
+    plt.plot(X_domain.squeeze(), median_pred, color="k", linewidth=2, label="mean")
+    plt.savefig(f"{save_model_path}/{training_method}_inputs_outputs_mean.png")
 
     # Predictive 
-    num_samples = 800
-    predictive = Predictive(model, guide=guide, num_samples=num_samples,
-                            return_sites=("obs", "_RETURN"))
     samples = predictive(X_domain)
     pred_summary = summary_stats(samples)
 
@@ -100,6 +135,7 @@ def plot_inputs_outputs(params, training_params, model_name,
     for n in range(num_samples):
         aleatoric_samples[n, :] = model.sample_obs(det_pred).detach().squeeze()
     std = torch.std(aleatoric_samples, dim=0)
+
     plt.fill_between(X_domain.squeeze(), 
                 mean_pred - 2*std, 
                 mean_pred + 2*std,
@@ -107,14 +143,70 @@ def plot_inputs_outputs(params, training_params, model_name,
     
     # Epistemic only
     plt.fill_between(X_domain.squeeze(), 
-                 pred_summary["_RETURN"]["5%"].squeeze(), 
-                 pred_summary["_RETURN"]["95%"].squeeze(),
+                 pred_summary["_RETURN"]["5%"][:, 0].squeeze(), 
+                 pred_summary["_RETURN"]["95%"][:, 0].squeeze(),
                  color="darkorchid", alpha=0.4, label="epistemic")
     
     plt.legend()
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
 
-    plt.savefig(f"{save_model_path}/input_outputs_NN_2sigma.png")
-    print(f"{save_model_path}/input_outputs_NN_2sigma.png")
+    plt.savefig(f"{save_model_path}/{training_method}_inputs_outputs_5-95quantiles.png")
+    print(f"{save_model_path}/{training_method}_inputs_outputs_5-95quantiles.png")
     print("Plots done")
 
+    plt.clf()
+    # Calculate epistemic and aleatoric and total variances
+    samples_mean = samples["_RETURN"][..., 0]
+    samples_sigma2 =  (torch.exp(samples["_RETURN"][..., 1])+model.eps)**2
+    observed_samples = samples["obs"]
+    print(samples_mean.shape)
+    
+    
+    # Mean prediction is mean of mean
+    mean_pred = torch.mean(samples_mean, dim=0)
+    # Aleatoric is mean of variance (integrated over all parameters)
+    aleatoric_var = torch.mean(samples_sigma2, dim=0)
+    # Epistemic is variance of conditional mean (ignoring aleatoric uncertainty)
+    epistemic_var = torch.var(samples_mean, dim=0)
+    # Law of total variances
+    total_var = aleatoric_var + epistemic_var
+    
+    # Set up plot
+    plt.clf()
+    figure, ax = plt.subplots(1)
+
+    # Plot raw data
+    plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
+    plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.xlabel("$X$", fontsize=18)
+    plt.ylabel("$U$", fontsize=18)
+    plt.tight_layout()
+    
+
+    # Both
+    plt.plot(X_domain.squeeze(), mean_pred, color="k", linewidth=2, label="mean")
+    plt.fill_between(X_domain.squeeze(), 
+                 mean_pred - 2*np.sqrt(total_var), 
+                 mean_pred + 2*np.sqrt(total_var),
+                 color="dimgrey", alpha=0.2, label="both")
+    
+    # Aleatoric
+    plt.fill_between(X_domain.squeeze(), 
+                 mean_pred - 2*np.sqrt(aleatoric_var), 
+                 mean_pred + 2*np.sqrt(aleatoric_var),
+                 color="seagreen", alpha=0.4, label="aleatoric")
+    # Epistemic
+    plt.fill_between(X_domain.squeeze(), 
+                 mean_pred - 2*np.sqrt(epistemic_var), 
+                 mean_pred + 2*np.sqrt(epistemic_var),
+                 color="darkorchid", alpha=0.4, label="epistemic")
+
+    plt.legend()
+    plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
+
+    plt.savefig(f"{save_model_path}/{training_method}_inputs_outputs.png")
+    print(f"{save_model_path}/{training_method}_inputs_outputs.png")
+
+    

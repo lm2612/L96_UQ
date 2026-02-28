@@ -113,7 +113,7 @@ class BayesianNN_Heteroscedastic(PyroModule):
 
         with pyro.plate("data", X.shape[0]):
             obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1), obs=Y)
-        return mean
+        return X
 
     def get_fixed_param_NN(self, param_dict):
         """Returns a NN torch module in same format as this model but with parameters fixed based on guide 

@@ -253,15 +253,15 @@ class Parameterisation_VI_Heteroscedastic(ParameterisationBase):
         y_t = mu + self.res
         return y_t
 
-    def param_epistemic_fixed(self, x):
-        """Can be used for Epistemic if sigma=0 or Both if sigma=learned sigma- 
-        keep parameters fixed at their values"""
+    def fixed_param_epistemic(self, x):
+        """Run with parameters fixed, sample epistemic only"""
         with torch.no_grad():
             det = self.fixed_param_NN(x.unsqueeze(-1)).squeeze()
         mean, sigma = det.chunk(2, dim=-1)
         return mean
         
-    def param_both_epistemicfixed_aleatoricAR1(self, x):
+    def fixed_param_both(self, x):
+        """Run with parameters fixed, sample both (Use AR1 for aleatoric)"""
         with torch.no_grad():
             det = self.fixed_param_NN(x.unsqueeze(-1)).squeeze()
         mean, sigma = det.chunk(2, dim=-1)
@@ -386,15 +386,15 @@ class Parameterisation_MCMC_Heteroscedastic():
         y_t = mu + self.res
         return y_t
     
-    def param_epistemic_fixed(self, x):
-        """Can be used for Epistemic if sigma=0 or Both if sigma=learned sigma- 
-        keep parameters fixed at their values"""
+    def fixed_param_epistemic(self, x):
+        """Run with parameters fixed, sample epistemic only"""
         with torch.no_grad():
             det = self.fixed_param_NN(x.unsqueeze(-1)).squeeze()
         mean, sigma = det.chunk(2, dim=-1)
         return mean
         
-    def param_both_epistemicfixed_aleatoricAR1(self, x):
+    def fixed_param_both(self, x):
+        """Run with parameters fixed, sample both (Use AR1 for aleatoric)"""
         with torch.no_grad():
             det = self.fixed_param_NN(x.unsqueeze(-1)).squeeze()
         mean, sigma = det.chunk(2, dim=-1)

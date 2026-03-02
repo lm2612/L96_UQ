@@ -13,7 +13,7 @@ from ml_models.BayesianModels import BayesianNN, BayesianLinearRegression
 
 from L96.L96_model import L96OneLayerParam
 
-def test(params, test_params, param_func, param_sample=None):
+def test(params, test_params, param_func, param_sample=None, reset_param=None):
     """Function that does online test and saves output
     Args:
     - params
@@ -60,6 +60,8 @@ def test(params, test_params, param_func, param_sample=None):
             param_sample(n)
         for i in range(N_init):
             # Initialize model
+            if reset_param is not None:
+                reset_param()
             l96_model = L96OneLayerParam(X_0=X_init_conds[i], 
                                         param_func=param_func, 
                                         dt=dt_f, 
@@ -72,7 +74,7 @@ def test(params, test_params, param_func, param_sample=None):
 
     # Save results
     np.save(f"{save_model_path}/{save_prefix}X_dtf.npy", X_all)
-    np.save(f"{save_model_path}/{save_prefix}U_dtf.npy", U_all)
+    #np.save(f"{save_model_path}/{save_prefix}U_dtf.npy", U_all)
     # Save meta data about run 
     np.save(f"{save_model_path}/{save_prefix}test_params.npy", test_params, allow_pickle=True)
 

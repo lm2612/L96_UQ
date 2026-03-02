@@ -41,7 +41,8 @@ class BayesianNN(PyroModule):
     """Bayesian neural network with arbitrary number of hidden layers - can be used for epistemic uncertainty (_RETURN) or both
     aleatoric and epistemic (obs)"""
     def __init__(self, n_features=1, n_targets=1, n_hidden=[16],
-        dist_name = "Normal", weight_scale=1., bias_scale=1.):
+        dist_name = "Normal", weight_scale=1., bias_scale=1., 
+        param_dict=None, prior_sigma_range=(1.0e-6, 10.) ):
         super().__init__()
         self.n_features = n_features
         self.n_targets = n_targets
@@ -57,11 +58,21 @@ class BayesianNN(PyroModule):
         self.layers = PyroModule[torch.nn.ModuleList]([])
         for j in range(len(nodes)-1):
             linear_j = PyroModule[torch.nn.Linear](nodes[j], nodes[j+1])
-            linear_j.weight = PyroSample(prior_dist(0., weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
-            linear_j.bias = PyroSample(prior_dist(0., bias_scale).expand([nodes[j+1]]).to_event(1))
+            # Set prior dists for all parameters
+            if param_dict is not None:
+                # Set parameter prior distribution centered on pretrained param values provided 
+                linear_j.weight = PyroSample(prior_dist(param_dict[f'layers.{j}.weight'], 
+                    weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
+                linear_j.bias = PyroSample(prior_dist(param_dict[f'layers.{j}.bias'], 
+                    bias_scale).expand([nodes[j+1]]).to_event(1))
+            else:
+                # Centre on zero
+                linear_j.weight = PyroSample(prior_dist(0., weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
+                linear_j.bias = PyroSample(prior_dist(0., bias_scale).expand([nodes[j+1]]).to_event(1))
             self.layers.append(linear_j)
 
         self.activation_function = torch.nn.ReLU()
+        self.prior_sigma_range = prior_sigma_range
 
     def forward(self, X, Y=None):
         for j in range(len(self.layers)-1):
@@ -69,7 +80,7 @@ class BayesianNN(PyroModule):
             X = self.activation_function(X)
         mean = self.layers[-1](X)
 
-        sigma = pyro.param("sigma", dist.Uniform(1.0e-6, 10.))
+        sigma = pyro.param("sigma", dist.Uniform(self.prior_sigma_range[0], self.prior_sigma_range[1]))
         with pyro.plate("data", X.shape[0]):
             obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1), obs=Y)
         return mean
@@ -90,7 +101,7 @@ class BayesianNN_Heteroscedastic(PyroModule):
     """Bayesian neural network with arbitrary number of hidden layers - can be used for 
     epistemic uncertainty (_RETURN) or both aleatoric and epistemic (obs)"""
     def __init__(self, n_features=1, n_targets=1, n_hidden=[16], eps=1e-15, 
-        dist_name = "Normal", weight_scale=1., bias_scale=1.):
+        dist_name = "Normal", weight_scale=1., bias_scale=1., param_dict=None):
         super().__init__()
         self.n_features = n_features
         self.n_targets = n_targets
@@ -106,8 +117,17 @@ class BayesianNN_Heteroscedastic(PyroModule):
         self.layers = PyroModule[torch.nn.ModuleList]([])
         for j in range(len(nodes)-1):
             linear_j = PyroModule[torch.nn.Linear](nodes[j], nodes[j+1])
-            linear_j.weight = PyroSample(prior_dist(0., weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
-            linear_j.bias = PyroSample(prior_dist(0., bias_scale).expand([nodes[j+1]]).to_event(1))
+            # Set prior dists for all parameters
+            if param_dict is not None:
+                # Set parameter prior distribution centered on pretrained param values provided 
+                linear_j.weight = PyroSample(prior_dist(param_dict[f'layers.{j}.weight'], 
+                    weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
+                linear_j.bias = PyroSample(prior_dist(param_dict[f'layers.{j}.bias'], 
+                    bias_scale).expand([nodes[j+1]]).to_event(1))
+            else:
+                # Centre on zero
+                linear_j.weight = PyroSample(prior_dist(0., weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
+                linear_j.bias = PyroSample(prior_dist(0., bias_scale).expand([nodes[j+1]]).to_event(1))
             self.layers.append(linear_j)
 
         self.activation_function = torch.nn.ReLU()

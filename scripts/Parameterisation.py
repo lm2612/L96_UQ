@@ -371,7 +371,7 @@ class Parameterisation_MCMC_Heteroscedastic():
         y_t = mu + self.res
         return y_t
 
-     def AR1_param_both(self, x):
+    def AR1_param_both(self, x):
         """AR1 that samples both aleatoric and epistemic by drawing one sample """
         param_samples = self.param_sample()
         NN = self.pyro_model.get_fixed_param_NN(param_samples)

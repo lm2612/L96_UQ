@@ -40,7 +40,8 @@ class BayesianLinearRegression(PyroModule):
 class BayesianNN(PyroModule):
     """Bayesian neural network with arbitrary number of hidden layers - can be used for epistemic uncertainty (_RETURN) or both
     aleatoric and epistemic (obs)"""
-    def __init__(self, n_features=1, n_targets=1, n_hidden=[16]):
+    def __init__(self, n_features=1, n_targets=1, n_hidden=[16],
+        dist_name = "Normal", weight_scale=1., bias_scale=1.):
         super().__init__()
         self.n_features = n_features
         self.n_targets = n_targets
@@ -48,11 +49,16 @@ class BayesianNN(PyroModule):
 
         nodes = [n_features]+n_hidden+[n_targets]
 
+        if dist_name == "Normal":
+            prior_dist = dist.Normal
+        elif dist_name == "Laplace":
+            prior_dist = dist.Laplace        
+
         self.layers = PyroModule[torch.nn.ModuleList]([])
         for j in range(len(nodes)-1):
             linear_j = PyroModule[torch.nn.Linear](nodes[j], nodes[j+1])
-            linear_j.weight = PyroSample(dist.Normal(0., 1.).expand([nodes[j+1], nodes[j]]).to_event(2))
-            linear_j.bias = PyroSample(dist.Normal(0., 10.).expand([nodes[j+1]]).to_event(1))
+            linear_j.weight = PyroSample(prior_dist(0., weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
+            linear_j.bias = PyroSample(prior_dist(0., bias_scale).expand([nodes[j+1]]).to_event(1))
             self.layers.append(linear_j)
 
         self.activation_function = torch.nn.ReLU()
@@ -81,9 +87,10 @@ class BayesianNN(PyroModule):
         return obs
 
 class BayesianNN_Heteroscedastic(PyroModule):
-    """Bayesian neural network with arbitrary number of hidden layers - can be used for epistemic uncertainty (_RETURN) or both
-    aleatoric and epistemic (obs)"""
-    def __init__(self, n_features=1, n_targets=1, n_hidden=[16], eps=1e-15):
+    """Bayesian neural network with arbitrary number of hidden layers - can be used for 
+    epistemic uncertainty (_RETURN) or both aleatoric and epistemic (obs)"""
+    def __init__(self, n_features=1, n_targets=1, n_hidden=[16], eps=1e-15, 
+        dist_name = "Normal", weight_scale=1., bias_scale=1.):
         super().__init__()
         self.n_features = n_features
         self.n_targets = n_targets
@@ -91,12 +98,16 @@ class BayesianNN_Heteroscedastic(PyroModule):
         self.eps = eps
 
         nodes = [n_features]+n_hidden+[n_targets*2]
+        if dist_name == "Normal":
+            prior_dist = dist.Normal
+        elif dist_name == "Laplace":
+            prior_dist = dist.Laplace        
 
         self.layers = PyroModule[torch.nn.ModuleList]([])
         for j in range(len(nodes)-1):
             linear_j = PyroModule[torch.nn.Linear](nodes[j], nodes[j+1])
-            linear_j.weight = PyroSample(dist.Normal(0., 1.).expand([nodes[j+1], nodes[j]]).to_event(2))
-            linear_j.bias = PyroSample(dist.Normal(0., 10.).expand([nodes[j+1]]).to_event(1))
+            linear_j.weight = PyroSample(prior_dist(0., weight_scale).expand([nodes[j+1], nodes[j]]).to_event(2))
+            linear_j.bias = PyroSample(prior_dist(0., bias_scale).expand([nodes[j+1]]).to_event(1))
             self.layers.append(linear_j)
 
         self.activation_function = torch.nn.ReLU()
@@ -129,3 +140,4 @@ class BayesianNN_Heteroscedastic(PyroModule):
         with pyro.plate("data", mean.shape[0]):
             obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1))
         return obs
+

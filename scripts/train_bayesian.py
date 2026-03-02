@@ -12,15 +12,20 @@ from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, Aut
 from pyro.infer import SVI, Trace_ELBO, Predictive
 from pyro.optim import Adam
 
-from ml_models.BayesianModels import BayesianLinearRegression, BayesianNN
+from ml_models.BayesianModels import BayesianLinearRegression, BayesianNN, BayesianNN_Heteroscedastic
 from utils.summary_stats import summary_stats
 from plotting_scripts.plot_inputs_outputs import plot_inputs_outputs
 
 def bayesian_train(params, training_params, model_name, model, guide):
+    """Learns posterior distribution of parameters using variational inference. 
+    Saves model and variational distribution (guide) to file so this can be used to generate
+    more parameter samples and the predictive posterior."""
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f,  = params['dt'], params['dt_f']
     N_train = training_params['N_train']
-    batch_size, lr, num_iterations = training_params['batch_size'],  training_params['lr'],  training_params['num_iterations']
+    batch_size, lr = training_params['batch_size'],  training_params['lr']
+    num_iterations =  training_params['num_iterations']
+    save_prefix = training_params['save_prefix']
 
     
     # Set up directory
@@ -88,8 +93,8 @@ def bayesian_train(params, training_params, model_name, model, guide):
                     "model": model,
                     "guide":guide}
 
-                torch.save(output_dicts, f"{save_model_path}/model_best.pt")
-                pyro.get_param_store().save( f"{save_model_path}/pyro_best_params.pt")
+                torch.save(output_dicts, f"{save_model_path}/{save_prefix}model_best.pt")
+                pyro.get_param_store().save( f"{save_model_path}/{save_prefix}pyro_best_params.pt")
                 min_loss = loss
         
         if iteration % 100 == 0:
@@ -107,8 +112,8 @@ def bayesian_train(params, training_params, model_name, model, guide):
         "model":model,
         "guide":guide}
 
-    torch.save(output_dicts, f"{save_model_path}/model.pt")
-    pyro.get_param_store().save( f"{save_model_path}/pyro_params.pt")
+    torch.save(output_dicts, f"{save_model_path}/{save_prefix}model.pt")
+    pyro.get_param_store().save( f"{save_model_path}/{save_prefix}pyro_params.pt")
     print("Model saved to ", save_model_path)
 
 
@@ -119,8 +124,8 @@ def bayesian_train(params, training_params, model_name, model, guide):
     #plt.semilogy(losses_val, alpha=0.5)
     plt.xlabel("Iterations")
     plt.ylabel("Loss")
-    plt.savefig(f"{save_model_path}/losses.png")
-    print(f"{save_model_path}/losses.png")
+    plt.savefig(f"{save_model_path}/{save_prefix}losses.png")
+    print(f"{save_model_path}/{save_prefix}losses.png")
 
     print(model, guide)
 
@@ -139,7 +144,7 @@ if __name__ == "__main__":
         'dt': 0.001,
         'dt_f': 0.005,
     }
-    training_params = {'N_train': 50, 
+    training_params = {'N_train': 100, 
                        'batch_size':128,
                        'N_timesteps':1,
                        'lr': 0.002,
@@ -151,10 +156,10 @@ if __name__ == "__main__":
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    model_name =  f"BayesianNN_16_N{N_train}"      # Choose LinearRegression or NN 
+    model_name =  f"BayesianNN_Heteroscedastic_16_16_N{N_train}"      # Choose LinearRegression or NN 
 
     # Define model and guide
-    model = BayesianNN(1, 1, [16])
+    model = BayesianNN_Heteroscedastic(1, 1, [16, 16])
 
     # Guide
     guide = AutoMultivariateNormal(model)

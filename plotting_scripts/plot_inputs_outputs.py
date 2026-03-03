@@ -10,7 +10,7 @@ from torch.utils.data import TensorDataset, DataLoader
 import pyro
 import pyro.distributions as dist
 from pyro.nn import PyroModule, PyroSample
-from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, AutoLowRankMultivariateNormal, AutoGaussian
+from pyro.infer.autoguide import AutoMultivariateNormal, AutoLowRankMultivariateNormal
 from pyro.infer import SVI, Trace_ELBO, Predictive
 from pyro.optim import Adam
 
@@ -24,6 +24,7 @@ def plot_inputs_outputs(params, training_params, model_name,
     dt, dt_f,  = params['dt'], params['dt_f']
     N_train = training_params['N_train']
     training_method = training_params['training_method']
+    save_prefix = training_params['save_prefix']
 
     # Set up directory
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
@@ -58,7 +59,7 @@ def plot_inputs_outputs(params, training_params, model_name,
     if training_method == "mcmc":
         # Assume variational inference
         kernel_name = training_params["kernel_name"]
-        output_dicts = torch.load(f"{save_model_path}/mcmc_{kernel_name}_predictive.pt")
+        output_dicts = torch.load(f"{save_model_path}/{save_prefix}mcmc_{kernel_name}_predictive.pt")
         model = output_dicts["model"]
         predictive = output_dicts["predictive"]
         posterior_samples = output_dicts["samples"]
@@ -69,10 +70,10 @@ def plot_inputs_outputs(params, training_params, model_name,
 
     else:
         # Assume variational inference
-        output_dicts = torch.load(f"{save_model_path}/model_best.pt")
+        output_dicts = torch.load(f"{save_model_path}/{save_prefix}model_best.pt")
         model = output_dicts["model"]
         guide = output_dicts["guide"]
-        pyro.get_param_store().load( f"{save_model_path}/pyro_best_params.pt")
+        pyro.get_param_store().load( f"{save_model_path}/{save_prefix}pyro_best_params.pt")
 
         # Generate posterior samples for deterministic prediction (mean/median)
         num_samples = 1000
@@ -118,7 +119,7 @@ def plot_inputs_outputs(params, training_params, model_name,
     det_pred = mean_fixed_param_NN(X_domain).detach()
     mean_pred = det_pred[:, 0]
     plt.plot(X_domain.squeeze(), median_pred, color="k", linewidth=2, label="mean")
-    plt.savefig(f"{save_model_path}/{training_method}_inputs_outputs_mean.png")
+    plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs_mean.png")
 
     # Predictive 
     samples = predictive(X_domain)
@@ -134,11 +135,11 @@ def plot_inputs_outputs(params, training_params, model_name,
     aleatoric_samples = torch.zeros((num_samples, det_pred.shape[0]))
     for n in range(num_samples):
         aleatoric_samples[n, :] = model.sample_obs(det_pred).detach().squeeze()
-    std = torch.std(aleatoric_samples, dim=0)
+    aleatoric_std = torch.std(aleatoric_samples, dim=0)
 
     plt.fill_between(X_domain.squeeze(), 
-                mean_pred - 2*std, 
-                mean_pred + 2*std,
+                mean_pred - 2*aleatoric_std, 
+                mean_pred + 2*aleatoric_std,
                 color="seagreen", alpha=0.4, label="aleatoric")
     
     # Epistemic only
@@ -150,22 +151,26 @@ def plot_inputs_outputs(params, training_params, model_name,
     plt.legend()
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
 
-    plt.savefig(f"{save_model_path}/{training_method}_inputs_outputs_5-95quantiles.png")
-    print(f"{save_model_path}/{training_method}_inputs_outputs_5-95quantiles.png")
+    plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs_5-95quantiles.png")
+    print(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs_5-95quantiles.png")
     print("Plots done")
 
     plt.clf()
     # Calculate epistemic and aleatoric and total variances
     samples_mean = samples["_RETURN"][..., 0]
-    samples_sigma2 =  (torch.exp(samples["_RETURN"][..., 1])+model.eps)**2
-    observed_samples = samples["obs"]
-    print(samples_mean.shape)
-    
-    
     # Mean prediction is mean of mean
     mean_pred = torch.mean(samples_mean, dim=0)
+
     # Aleatoric is mean of variance (integrated over all parameters)
-    aleatoric_var = torch.mean(samples_sigma2, dim=0)
+    print(samples["_RETURN"].shape, samples["obs"].shape )
+    if samples["_RETURN"].shape[-1] > 1:
+        samples_sigma2 =  (torch.exp(samples["_RETURN"][..., 1])+model.eps)**2
+        aleatoric_var = torch.mean(samples_sigma2, dim=0)
+    else:
+        # Or for homoscedastic, its a constant
+        aleatoric_var =  (pyro.get_param_store()['sigma'].detach())**2
+        print(aleatoric_var.shape)
+    
     # Epistemic is variance of conditional mean (ignoring aleatoric uncertainty)
     epistemic_var = torch.var(samples_mean, dim=0)
     # Law of total variances
@@ -206,7 +211,65 @@ def plot_inputs_outputs(params, training_params, model_name,
     plt.legend()
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
 
-    plt.savefig(f"{save_model_path}/{training_method}_inputs_outputs.png")
-    print(f"{save_model_path}/{training_method}_inputs_outputs.png")
+    plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs.png")
+    print(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs.png")
 
-    
+    # Sanity check how mean prediction (E[Y|X,\theta]) differs from deterministic prediction
+    # with mean parameters Y|X,E[\theta]
+    plt.clf()
+    figure, ax = plt.subplots(1)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.xlabel("$X$", fontsize=18)
+    plt.ylabel("$\sigma$", fontsize=18)
+    plt.tight_layout()
+
+    for j in range(num_samples):
+            plt.plot(X_domain, samples_mean[j], color="skyblue", lw=0.5, alpha=0.1)
+    plt.plot(X_domain, mean_pred, color="darkorchid", lw=1, label=r"$E[U|X,\theta]$")
+
+    # Compare to deterministic prediction, assuming mean parameter values 
+    plt.plot(X_domain, det_pred[:, 0], color="k", lw=1, label=r"$U|X,\bar{\theta}$")
+
+    # Median only different if using MCMC
+    #plt.plot(X_domain, det_pred_median[:, 0], color="green", lw=1, linestyle="dashed", 
+    #    label="Predicted from median theta")
+    plt.legend()
+    plt.axis( xmin=Xmin, xmax=Xmax, ymin=Xmin, ymax=Xmax)
+
+    plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_mu.png")
+    print(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_mu.png")
+
+    if samples["_RETURN"].shape[-1] > 1:
+        # For heteroscedastic, sanity check how aleatoric mean of variance (E[Var(Y|X,\theta)]) 
+        # differs from variance of deterministic prediction with mean parameters Var(Y|X,E[\theta])
+        plt.clf()
+        figure, ax = plt.subplots(1)
+        plt.xticks(fontsize=18)
+        plt.yticks(fontsize=18)
+        plt.xlabel("$X$", fontsize=18)
+        plt.ylabel("$\sigma$", fontsize=18)
+        plt.tight_layout()
+
+        for j in range(num_samples):
+            plt.plot(X_domain, np.sqrt(samples_sigma2[j]), color="skyblue", lw=0.5, alpha=0.1)
+        plt.plot(X_domain, np.sqrt(aleatoric_var), color="seagreen", lw=1, 
+            label=r"$E[Var(U|X,\theta)]$")
+
+        # Compare to deterministic prediction, assuming mean parameter values 
+        aleatoric_predicted_sigma = np.abs(torch.exp(det_pred[:, 1])+model.eps)
+        plt.plot(X_domain, aleatoric_predicted_sigma, color="k", lw=1, 
+            label=r"$Var(U|X,\bar{\theta})$")
+
+        # Median only different if using MCMC
+        #aleatoric_predicted_sigma = np.abs(torch.exp(det_pred_median[:, 1])+model.eps)
+        #plt.plot(X_domain, aleatoric_predicted_sigma, color="green", lw=1, linestyle="dashed", 
+        #    label="Predicted from median theta")
+
+        plt.legend()
+        plt.axis( xmin=Xmin, xmax=Xmax, ymin=0, ymax=10.)
+
+        plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_sigma.png")
+        print(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_sigma.png")
+
+    print("Plots done.")

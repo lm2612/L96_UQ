@@ -7,10 +7,10 @@ import pyro
 from pyro.infer import Predictive
 
 from ml_models.TorchModels import LinearRegression, NN
-from ml_models.BayesianModels import BayesianNN, BayesianNN_Heteroscedastic, BayesianLinearRegression
+from ml_models.BayesianModels import BayesianNN
 
 from scripts.online_test import test
-from scripts.AR_parameterisation import ParameterisationAR1
+from scripts.Parameterisation import *
 
 # Set up parameters for simulation
 params ={
@@ -23,18 +23,19 @@ params ={
     'dt': 0.001,
     'dt_f': 0.005,
 }
+
 test_params = { 'fname':'X_dtf.npy',
                 'runtype': None,
                 'save_model_path':'',
                 'save_prefix':'',
                 'n_ens': 50,
-                'N_init': 1,
+                'N_init': 100,
                 'save_step': 1,
                 'T':10 ,
                 'F':20                  }
 
 # Model name
-model_name =  f"BayesianNN_16_16_N100" 
+model_name =  f"BayesianNN_16_16_N100_priorNormal(0,1.0)" 
 model_path = f"./data/K{params['K']}_J{params['J']}_h{params['h']}_c{params['c']}_b{params['b']}_F{params['F']}/{model_name}/"
 test_params['save_model_path'] = model_path
 
@@ -46,33 +47,56 @@ guide = output_dicts["guide"]
 
 # Lag-1 Autocorrelation of long timeseries is 0.984865 
 phi = 0.984865 
-parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = 0., phi=phi)
 
-# Run Epistemic treated as AR1
-param_func = parameterisation_AR1.epistemic_AR1
+# Set up Parameterisation for Homoscedastic BNN learned via Variational Inference (VI)
+parameterisation = Parameterisation_VI(pyro_model, guide=guide, phi=phi)
+
+# White noise
+# Epistemic
+param_func = parameterisation.WN_param_epistemic
 test_params['runtype'] = 'epistemic'
-test_params['save_prefix'] = 'epistemic_AR1_' 
-#test(params, test_params, param_func)
+test_params['save_prefix'] = f'VI_WN_epistemic_' 
+test(params, test_params, param_func)
 
-# Run Aleatoric with AR1 - need to set up ParameterisationAR1 class with sigma from guide
-sigma = pyro.get_param_store()['sigma'].detach()
-parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi)
-param_func = parameterisation_AR1.aleatoric_only
-
+# Aleatoric
+param_func = parameterisation.WN_param_aleatoric
 test_params['runtype'] = 'aleatoric'
-test_params['save_prefix'] = 'aleatoric_AR1_' 
+test_params['save_prefix'] = f'VI_WN_aleatoric_' 
 test(params, test_params, param_func)
 
-parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi, 
-    aleatoric=False, epistemic=True, N=10)
-param_func = parameterisation_AR1.AR1_param
-test_params['runtype'] = 'epistemic'
-test_params['save_prefix'] = 'new_epistemic_AR1_' 
-test(params, test_params, param_func)
-
-parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi, 
-    aleatoric=True, epistemic=True, N=10)
-param_func = parameterisation_AR1.AR1_param
+# Both
+param_func = parameterisation.WN_param_both
 test_params['runtype'] = 'both'
-test_params['save_prefix'] = 'new_both_AR1_' 
+test_params['save_prefix'] = f'VI_WN_both_' 
 test(params, test_params, param_func)
+
+# AR1
+# Epistemic
+param_func = parameterisation.AR1_param_epistemic
+test_params['runtype'] = 'epistemic'
+test_params['save_prefix'] = f'VI_AR1_epistemic_' 
+test(params, test_params, param_func)
+
+# Aleatoric
+param_func = parameterisation.AR1_param_aleatoric
+test_params['runtype'] = 'aleatoric'
+test_params['save_prefix'] = f'VI_AR1_aleatoric_' 
+test(params, test_params, param_func)
+
+# Both
+param_func = parameterisation.AR1_param_both
+test_params['runtype'] = 'both'
+test_params['save_prefix'] = f'VI_AR1_both_' 
+test(params, test_params, param_func)
+
+# Epistemic fixed
+#param_func = parameterisation.fixed_param_epistemic
+#test_params['runtype'] = 'epistemic'
+#test_params['save_prefix'] = f'VI_fixed_epistemic_' 
+##test(params, test_params, param_func, param_sample)
+
+# Both, with epistemic fixed
+#param_func = parameterisation.fixed_param_both
+#test_params['runtype'] = 'both'
+#test_params['save_prefix'] = f'VI_fixed_both_' 
+##test(params, test_params, param_func, param_sample)

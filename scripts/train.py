@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 
 from ml_models.TorchModels import LinearRegression, NN, NNDropout
+from plotting_scripts.plot_data_histogram import plot_hist
 
 
 def train(params, training_params, model_name, model):
@@ -12,6 +13,8 @@ def train(params, training_params, model_name, model):
     dt, dt_f = params['dt'], params['dt_f']
     N_train = training_params['N_train']
     batch_size = training_params['batch_size']
+    predict_sigma = training_params['predict_sigma']
+    save_prefix = training_params['save_prefix']
 
     # Set up directory
     data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
@@ -44,9 +47,17 @@ def train(params, training_params, model_name, model):
 
     X_torch = torch.tensor(features, dtype=torch.float32).reshape((-1, 1))
     Y_torch = torch.tensor(targets, dtype=torch.float32).reshape((-1, 1))
+    
 
     X_val = torch.tensor(features_val, dtype=torch.float32).reshape((-1, 1))
     Y_val = torch.tensor(targets_val, dtype=torch.float32).reshape((-1, 1))
+
+    if predict_sigma:
+        targets_sigma = torch.log(Y_torch.std()).tile(dims=(Y_torch.shape[0],1))
+        Y_torch = torch.concat((Y_torch, targets_sigma), dim=1)
+
+        targets_sigma = torch.log(Y_val.std()).tile(dims=(Y_val.shape[0],1))
+        Y_val = torch.concat((Y_val, targets_sigma), dim=1)
 
     # Optimisation settings
     optimiser = torch.optim.Adam(params = model.parameters(), lr=1e-2)
@@ -83,7 +94,7 @@ def train(params, training_params, model_name, model):
                 "train_loss": losses[-1],
                 "model": model}
 
-            torch.save(output_dicts, f"{save_model_path}/model_best.pt")
+            torch.save(output_dicts, f"{save_model_path}/{save_prefix}model_best.pt")
             min_loss = loss
 
     print("Done training")
@@ -97,32 +108,36 @@ def train(params, training_params, model_name, model):
         "torch_rng_state": torch.random.get_rng_state(),
         "model":model}
 
-    torch.save(output_dicts, f"{save_model_path}/model.pt")
+    torch.save(output_dicts, f"{save_model_path}/{save_prefix}model.pt")
     print("Model saved to ", save_model_path)
 
 
     # Plot and save losses
     plt.clf()
     figure, ax = plt.subplots(1)
-    plt.semilogy(losses)
-    #plt.semilogy(losses_val, alpha=0.5)
+    plt.semilogy(losses, color="k")
+    plt.semilogy(losses_val, color="b")
     plt.xlabel("Iterations")
-    plt.ylabel("Loss")
-    plt.savefig(f"{save_model_path}/losses.png")
+    plt.ylabel("MSE Loss")
+    plt.savefig(f"{save_model_path}/{save_prefix}losses.png")
 
     # Plot and save result
     model.eval()
     plt.clf()
     
     # Plot
-    Xmin=-14
-    Xmax=24
-    Ymin=-22
-    Ymax=22
-    figure, ax = plt.subplots(1)
+    Xmin=-9
+    Xmax=16
+    Ymin=-21
+    Ymax=16
+    figure, (ax1, ax2) = plt.subplots(2, 1, sharex=True, 
+        gridspec_kw={'height_ratios': [5, 1], 'hspace':0})
     X_domain = torch.linspace(Xmin, Xmax, 80).unsqueeze(-1)
 
     # Plot raw data
+    if predict_sigma:
+        Y_torch = Y_torch[:, 0]
+    plt.sca(ax1)
     plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2, label="Training data")
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
     plt.xticks(fontsize=18)
@@ -134,12 +149,29 @@ def train(params, training_params, model_name, model):
     print(f"{save_model_path}/data.png")
 
     # Deterministic prediction 
-    det_pred = model(X_domain).detach()
+    out = model(X_domain).detach()
+    if out.shape[1] > 1:
+        det_pred, det_sigma = out.chunk(2, dim=-1)
+        det_sigma = torch.exp(det_sigma)
+    else:
+        det_pred = out
 
     plt.plot(X_domain.squeeze(), det_pred, color="k", linewidth=2, label="Deterministic NN")
+    if out.shape[1] > 1:
+        plt.plot(X_domain.squeeze(), det_pred+det_sigma, color="k", linestyle="dashed", linewidth=2, label="output 2")
+        plt.plot(X_domain.squeeze(), det_pred-det_sigma, color="k", linestyle="dashed", linewidth=2, label="output 2")
+
     plt.legend()
-    plt.savefig(f"{save_model_path}/offline_deterministic.png")
-    print(f"{save_model_path}/offline_deterministic.png")
+    # Add histogram
+    plt.sca(ax2)
+    plot_hist(X_torch.flatten()[::], ax2)
+    plt.axis(ymin=0, xmin=Xmin, xmax=Xmax)
+    plt.yticks([], fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.xlabel("$X$", fontsize=18)
+    plt.tight_layout()
+    plt.savefig(f"{save_model_path}/{save_prefix}offline_deterministic.png")
+    print(f"{save_model_path}/{save_prefix}offline_deterministic.png")
     plt.close()
 
 if __name__ == "__main__":

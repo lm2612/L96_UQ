@@ -16,10 +16,10 @@ from pyro.optim import Adam
 
 from ml_models.BayesianModels import BayesianLinearRegression, BayesianNN
 from utils.summary_stats import summary_stats
-
+from plotting_scripts.plot_data_histogram import plot_hist
 
 def plot_inputs_outputs(params, training_params, model_name, 
-    Xmin=-14, Xmax=24, Ymin=-22, Ymax=22, num_samples=800):
+    Xmin=-9, Xmax=16, Ymin=-22, Ymax=22, num_samples=800):
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f,  = params['dt'], params['dt_f']
     N_train = training_params['N_train']
@@ -90,16 +90,24 @@ def plot_inputs_outputs(params, training_params, model_name,
 
     # Set up plot
     plt.clf()
-    figure, ax = plt.subplots(1)
+    figure, (ax1, ax2) = plt.subplots(2, 1, sharex=True, 
+        gridspec_kw={'height_ratios': [5, 1], 'hspace':0})
     X_domain = torch.linspace(Xmin, Xmax, 80).unsqueeze(-1)
 
     # Plot raw data
+    plt.sca(ax1)
     plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
-    plt.xlabel("$X$", fontsize=18)
     plt.ylabel("$U$", fontsize=18)
+    # Add histogram
+    plt.sca(ax2)
+    plot_hist(X_torch.flatten()[::], ax2)
+    plt.axis(ymin=0, xmin=Xmin, xmax=Xmax)
+    plt.yticks([], fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.xlabel("$X$", fontsize=18)
     plt.tight_layout()
     plt.savefig(f"{save_model_path}/data.png")
     print(f"{save_model_path}/data.png")
@@ -112,13 +120,14 @@ def plot_inputs_outputs(params, training_params, model_name,
     median_fixed_param_NN.eval()
     det_pred_median = median_fixed_param_NN(X_domain).detach()
     median_pred = det_pred_median[:, 0]
-     
+
+    plt.sca(ax1)  
     plt.plot(X_domain.squeeze(), median_pred, color="k", linestyle="dashed", linewidth=2, label="median")
     mean_fixed_param_NN = model.get_fixed_param_NN(mean_guide)
     mean_fixed_param_NN.eval()
     det_pred = mean_fixed_param_NN(X_domain).detach()
     mean_pred = det_pred[:, 0]
-    plt.plot(X_domain.squeeze(), median_pred, color="k", linewidth=2, label="mean")
+    plt.plot(X_domain.squeeze(), median_pred, color="k", linewidth=2, label="Mean")
     plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs_mean.png")
 
     # Predictive 
@@ -129,7 +138,7 @@ def plot_inputs_outputs(params, training_params, model_name,
     plt.fill_between(X_domain.squeeze(), 
                  pred_summary["obs"]["5%"].squeeze(), 
                  pred_summary["obs"]["95%"].squeeze(),
-                 color="dimgrey", alpha=0.2, label="both")
+                 color="dimgrey", alpha=0.2, label="Total")
 
     # Aleatoric only 
     aleatoric_samples = torch.zeros((num_samples, det_pred.shape[0]))
@@ -140,13 +149,13 @@ def plot_inputs_outputs(params, training_params, model_name,
     plt.fill_between(X_domain.squeeze(), 
                 mean_pred - 2*aleatoric_std, 
                 mean_pred + 2*aleatoric_std,
-                color="seagreen", alpha=0.4, label="aleatoric")
+                color="seagreen", alpha=0.4, label="Aleatoric")
     
     # Epistemic only
     plt.fill_between(X_domain.squeeze(), 
                  pred_summary["_RETURN"]["5%"][:, 0].squeeze(), 
                  pred_summary["_RETURN"]["95%"][:, 0].squeeze(),
-                 color="darkorchid", alpha=0.4, label="epistemic")
+                 color="darkorchid", alpha=0.4, label="Epistemic")
     
     plt.legend()
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
@@ -178,9 +187,11 @@ def plot_inputs_outputs(params, training_params, model_name,
     
     # Set up plot
     plt.clf()
-    figure, ax = plt.subplots(1)
+    figure, (ax1, ax2) = plt.subplots(2, 1, sharex=True, 
+        gridspec_kw={'height_ratios': [5, 1], 'hspace':0})
 
     # Plot raw data
+    plt.sca(ax1)
     plt.scatter(X_torch.flatten()[::], Y_torch.flatten()[::], color="k", alpha=0.2)
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
     plt.xticks(fontsize=18)
@@ -191,25 +202,33 @@ def plot_inputs_outputs(params, training_params, model_name,
     
 
     # Both
-    plt.plot(X_domain.squeeze(), mean_pred, color="k", linewidth=2, label="mean")
+    plt.plot(X_domain.squeeze(), mean_pred, color="k", linewidth=2, label="Mean")
     plt.fill_between(X_domain.squeeze(), 
                  mean_pred - 2*np.sqrt(total_var), 
                  mean_pred + 2*np.sqrt(total_var),
-                 color="dimgrey", alpha=0.2, label="both")
+                 color="dimgrey", alpha=0.2, label="Total")
     
     # Aleatoric
     plt.fill_between(X_domain.squeeze(), 
                  mean_pred - 2*np.sqrt(aleatoric_var), 
                  mean_pred + 2*np.sqrt(aleatoric_var),
-                 color="seagreen", alpha=0.4, label="aleatoric")
+                 color="seagreen", alpha=0.4, label="Aleatoric")
     # Epistemic
     plt.fill_between(X_domain.squeeze(), 
                  mean_pred - 2*np.sqrt(epistemic_var), 
                  mean_pred + 2*np.sqrt(epistemic_var),
-                 color="darkorchid", alpha=0.4, label="epistemic")
+                 color="darkorchid", alpha=0.4, label="Epistemic")
 
     plt.legend()
     plt.axis(ymin=Ymin, ymax=Ymax, xmin=Xmin, xmax=Xmax)
+    # Add histogram
+    plt.sca(ax2)
+    plot_hist(X_torch.flatten()[::], ax2)
+    plt.axis(ymin=0, xmin=Xmin, xmax=Xmax)
+    plt.yticks([], fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.xlabel("$X$", fontsize=18)
+    plt.tight_layout()
 
     plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs.png")
     print(f"{save_model_path}/{training_method}_{save_prefix}inputs_outputs.png")
@@ -217,25 +236,37 @@ def plot_inputs_outputs(params, training_params, model_name,
     # Sanity check how mean prediction (E[Y|X,\theta]) differs from deterministic prediction
     # with mean parameters Y|X,E[\theta]
     plt.clf()
-    figure, ax = plt.subplots(1)
+    figure, (ax1, ax2) = plt.subplots(2, 1, sharex=True, 
+        gridspec_kw={'height_ratios': [5, 1], 'hspace':0})
+    plt.sca(ax1)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
     plt.xlabel("$X$", fontsize=18)
-    plt.ylabel("$\sigma$", fontsize=18)
+    plt.ylabel("$\mu$", fontsize=18)
     plt.tight_layout()
 
     for j in range(num_samples):
-            plt.plot(X_domain, samples_mean[j], color="skyblue", lw=0.5, alpha=0.1)
-    plt.plot(X_domain, mean_pred, color="darkorchid", lw=1, label=r"$E[U|X,\theta]$")
+            plt.plot(X_domain, samples_mean[j], color="skyblue", lw=0.5, alpha=0.4,
+            label = r"$U_{i}|X,\theta$" if j==0 else None)
+    plt.plot(X_domain, mean_pred, color="darkorchid", lw=2, label=r"$E[U|X,\theta]$")
 
     # Compare to deterministic prediction, assuming mean parameter values 
-    plt.plot(X_domain, det_pred[:, 0], color="k", lw=1, label=r"$U|X,\bar{\theta}$")
+    plt.plot(X_domain, det_pred[:, 0], color="k", lw=2, label=r"$U|X,\bar{\theta}$")
 
     # Median only different if using MCMC
     #plt.plot(X_domain, det_pred_median[:, 0], color="green", lw=1, linestyle="dashed", 
     #    label="Predicted from median theta")
     plt.legend()
-    plt.axis( xmin=Xmin, xmax=Xmax, ymin=Xmin, ymax=Xmax)
+    plt.axis(xmin=Xmin, xmax=Xmax, ymin=Ymin, ymax=Ymax)
+
+    # Add histogram
+    plt.sca(ax2)
+    plot_hist(X_torch.flatten()[::], ax2)
+    plt.axis(ymin=0, xmin=Xmin, xmax=Xmax)
+    plt.yticks([], fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.xlabel("$X$", fontsize=18)
+    plt.tight_layout()
 
     plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_mu.png")
     print(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_mu.png")
@@ -244,7 +275,9 @@ def plot_inputs_outputs(params, training_params, model_name,
         # For heteroscedastic, sanity check how aleatoric mean of variance (E[Var(Y|X,\theta)]) 
         # differs from variance of deterministic prediction with mean parameters Var(Y|X,E[\theta])
         plt.clf()
-        figure, ax = plt.subplots(1)
+        figure, (ax1, ax2) = plt.subplots(2, 1, sharex=True, 
+            gridspec_kw={'height_ratios': [5, 1], 'hspace':0})
+        plt.sca(ax1)
         plt.xticks(fontsize=18)
         plt.yticks(fontsize=18)
         plt.xlabel("$X$", fontsize=18)
@@ -252,14 +285,16 @@ def plot_inputs_outputs(params, training_params, model_name,
         plt.tight_layout()
 
         for j in range(num_samples):
-            plt.plot(X_domain, np.sqrt(samples_sigma2[j]), color="skyblue", lw=0.5, alpha=0.1)
-        plt.plot(X_domain, np.sqrt(aleatoric_var), color="seagreen", lw=1, 
-            label=r"$E[Var(U|X,\theta)]$")
+            plt.plot(X_domain, np.sqrt(samples_sigma2[j]), color="skyblue", lw=0.5, alpha=0.4,
+                        label = r"$\sigma (U_{i}|X,\theta$)" if j==0 else None)
+
+        plt.plot(X_domain, np.sqrt(aleatoric_var), color="seagreen", lw=2, 
+            label=r"$(E[\sigma^2(U|X,\theta)])^{1/2}$")
 
         # Compare to deterministic prediction, assuming mean parameter values 
         aleatoric_predicted_sigma = np.abs(torch.exp(det_pred[:, 1])+model.eps)
-        plt.plot(X_domain, aleatoric_predicted_sigma, color="k", lw=1, 
-            label=r"$Var(U|X,\bar{\theta})$")
+        plt.plot(X_domain, aleatoric_predicted_sigma, color="k", lw=2, 
+            label=r"$\sigma(U|X,\bar{\theta})$")
 
         # Median only different if using MCMC
         #aleatoric_predicted_sigma = np.abs(torch.exp(det_pred_median[:, 1])+model.eps)
@@ -268,6 +303,15 @@ def plot_inputs_outputs(params, training_params, model_name,
 
         plt.legend()
         plt.axis( xmin=Xmin, xmax=Xmax, ymin=0, ymax=10.)
+
+        # Add histogram
+        plt.sca(ax2)
+        plot_hist(X_torch.flatten()[::], ax2)
+        plt.axis(ymin=0, xmin=Xmin, xmax=Xmax)
+        plt.yticks([], fontsize=18)
+        plt.xticks(fontsize=18)
+        plt.xlabel("$X$", fontsize=18)
+        plt.tight_layout()
 
         plt.savefig(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_sigma.png")
         print(f"{save_model_path}/{training_method}_{save_prefix}input_aleatoric_sigma.png")

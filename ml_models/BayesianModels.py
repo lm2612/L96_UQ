@@ -92,7 +92,7 @@ class BayesianNN(PyroModule):
 
     def sample_obs(self, mean):
         """Sample aleatoric noise (e.g., if using deterministic pred w/ fixed parameters)"""
-        sigma = pyro.param("sigma", dist.Uniform(1.0e-6, 10.))
+        sigma = pyro.param("sigma", dist.Uniform(self.prior_sigma_range[0], self.prior_sigma_range[1]))
         with pyro.plate("data", mean.shape[0]):
             obs = pyro.sample("obs", dist.Normal(mean, sigma).to_event(1))
         return obs

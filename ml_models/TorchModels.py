@@ -15,7 +15,8 @@ class LinearRegression(torch.nn.Module):
 
 class NN(torch.nn.Module):
     """Neural Network with arbitrary number of layers."""
-    def __init__(self, n_features=1, n_targets=1, n_hidden=[16], param_dict = None):
+    def __init__(self, n_features=1, n_targets=1, 
+        n_hidden=[16], param_dict = None, activation="ReLU"):
         """Args:
         param_dict (optional) dictionary of weights and biases that must follow size of NN requested
         e.g., to get param_dict from a guide, you can do param_dict = guide.median() or guide()"""
@@ -35,8 +36,18 @@ class NN(torch.nn.Module):
                 linear_j.weight = torch.nn.parameter.Parameter(param_dict[f'layers.{j}.weight'])
                 linear_j.bias = torch.nn.parameter.Parameter(param_dict[f'layers.{j}.bias'])
             self.layers.append(linear_j)
-
-        self.activation_function = torch.nn.ReLU()
+        
+        # Set up activation function (default ReLU)
+        if activation == "ReLU":
+            self.activation_function = torch.nn.ReLU()
+        elif activation == "LeakyReLU":
+            self.activation_function = torch.nn.LeakyReLU()
+        elif  activation == "Sigmoid":
+            self.activation_function = torch.nn.Sigmoid()
+        elif activation == "Tanh":
+            self.activation_function = torch.nn.Tanh()
+        else:
+            raise NotImplementedError()
 
     def forward(self, X):
         for j in range(len(self.layers)-1):

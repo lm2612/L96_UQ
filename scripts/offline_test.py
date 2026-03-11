@@ -14,7 +14,96 @@ from ml_models.BayesianModels import BayesianNN, BayesianLinearRegression
 from L96.numerical_methods import RK2_step
 from L96.L96_model import dX_dt_onelayer
 
-def test(params, test_params, param_func, param_sample=None):
+
+def offline_errs(params, model_paths, save_prefixs=[""]):
+    """
+    Calculate offline metrics (RMSE, R2) on entire dataset.
+    * params of system
+    * model_path must be full model path including dir and .pt
+    * model_labels to label the x-axis"""
+    K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
+    dt, dt_f = params['dt'], params['dt_f']
+
+    # Set up directories
+    data_path = f'./data/K{K}_J{J}_h{h}_c{c}_b{b}_F{F}'
+
+    plot_path = f'{data_path}/comparison_plots/'
+    if not os.path.exists(plot_path):
+        os.makedirs(plot_path)
+
+    # Get data 
+    X = np.load(f'{data_path}/X_dtf.npy')
+    U = np.load(f'{data_path}/U_dtf.npy')
+    print(f'Data loaded from {data_path}')
+
+    # Subsample to remove correlations
+    subsample = 1000 # (1 Time Units)
+    X = X[::subsample]
+    U = U[::subsample]
+
+    N = X.shape[0]
+
+    # Calc variance across validation dataset (same size for all N_train)
+    features = np.ravel(X[:])   
+    targets = np.ravel(U[:])   
+    X_torch = torch.tensor(features, dtype=torch.float32).reshape((-1, 1))
+    Y_torch = torch.tensor(targets, dtype=torch.float32).reshape((-1, 1))
+
+    N_train = 100
+
+    features = np.ravel(X[:N_train])   
+    targets = np.ravel(U[:N_train])   
+
+    features_val = np.ravel(X[N_train:])   
+    targets_val = np.ravel(U[N_train:])    
+
+    print(features.shape, targets.shape, features_val.shape, targets_val.shape)
+
+    X_train = torch.tensor(features, dtype=torch.float32).reshape((-1, 1))
+    Y_train = torch.tensor(targets, dtype=torch.float32).reshape((-1, 1))
+    
+
+    X_val = torch.tensor(features_val, dtype=torch.float32).reshape((-1, 1))
+    Y_val = torch.tensor(targets_val, dtype=torch.float32).reshape((-1, 1))
+
+    plt.clf()
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+
+    rmses_all, rmses_train, rmses_test = [], [], []
+    maes_all, maes_train, maes_test = [], [], []
+    R2s = []
+
+    for n, model_path in enumerate(model_paths):
+        print(model_path)
+        save_prefix = save_prefixs[n]
+        output_dicts = torch.load(f"{data_path}/{model_path}/{save_prefix}model_best.pt")
+        model = output_dicts["model"]
+        
+        # Test on full dataset
+        Y_pred = model(X_torch).detach()
+        rmse = torch.sqrt(torch.mean((Y_pred - Y_torch)**2))
+        mae = torch.mean(torch.abs(Y_pred - Y_torch))
+        rmses_all.append(rmse.item())
+        maes_all.append(mae.item())
+
+        # Training dataset
+        Y_pred = model(X_train).detach()
+        rmse = torch.sqrt(torch.mean((Y_pred - Y_train)**2))
+        mae = torch.mean(torch.abs(Y_pred - Y_train))
+        rmses_train.append(rmse.item())
+        maes_train.append(mae.item())
+
+        # Test dataset
+        Y_pred = model(X_val).detach()
+        rmse = torch.sqrt(torch.mean((Y_pred - Y_val)**2))
+        mae = torch.mean(torch.abs(Y_pred - Y_val))
+        rmses_test.append(rmse.item())
+        maes_test.append(mae.item())
+
+        print(model_path, rmse, mae)
+    return rmses_train, rmses_test
+
+def offline_test(params, test_params, param_func, param_sample=None):
     """Function that does online test and saves output
     Args:
     - params
@@ -90,7 +179,7 @@ if __name__ == "__main__":
                     'T':10 ,
                     'F':20                  }
 
-    model_name =  f"BayesianNN_16_N50" 
+    model_name =  f"BayesianNN_16_16_N100_priorNormal(0,1.0)" 
     model_path = f"./data/K{params['K']}_J{params['J']}_h{params['h']}_c{params['c']}_b{params['b']}_F{params['F']}/{model_name}/"
     test_params['save_model_path'] = model_path
 
@@ -99,36 +188,13 @@ if __name__ == "__main__":
     pyro.get_param_store().load(f"{model_path}/pyro_params.pt")
     pyro_model = output_dicts["model"]
     guide = output_dicts["guide"]
+
+    # For parameterisation, sample predictive directly (captures both aleatoric & epistemic)
     predictive = Predictive(pyro_model, guide=guide, num_samples=1, return_sites=("_RETURN", "obs"))
-
-    # Run Epistemic with white noise
-    def param_func(x):
-        out = predictive(x.unsqueeze(-1))["_RETURN"]
-        return out.squeeze()
-    test_params['runtype'] = 'epistemic'
-    test_params['save_prefix'] = 'epistemic_' 
-    test(params, test_params, param_func)
-
-    # Run Aleatoric with white noise
-    sigma = pyro.get_param_store()['sigma']
-        
-    fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())
-    fixed_param_NN.eval()
-    def param_func(x):
-        with torch.no_grad():
-            mean = fixed_param_NN(x.unsqueeze(-1))
-            out = pyro_model.sample_obs(mean)
-        return out.squeeze()
-
-    test_params['runtype'] = 'aleatoric'
-    test_params['save_prefix'] = 'aleatoric_' 
-    test(params, test_params, param_func)
-
-    # Run both types of uncertainty 
     def param_func(x):
         out = predictive(x.unsqueeze(-1))["obs"]
         return out.squeeze()
-
     test_params['runtype'] = 'both'
-    test_params['save_prefix'] = 'both_' 
-    test(params, test_params, param_func)
+    test_params['save_prefix'] = 'short_offline_test_' 
+    offline_test(params, test_params, param_func)
+

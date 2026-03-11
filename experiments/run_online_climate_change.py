@@ -9,7 +9,7 @@ from pyro.infer import Predictive
 from ml_models.TorchModels import LinearRegression, NN
 from ml_models.BayesianModels import BayesianNN, BayesianNN_Heteroscedastic, BayesianLinearRegression
 
-from scripts.online_test import test
+from scripts.online_test import online_test
 from scripts.AR_parameterisation import ParameterisationAR1
 from utils.concat_files import concat_files
 
@@ -66,7 +66,7 @@ for i in range(1):
     test_params['runtype'] = 'deterministic'
     test_params['save_prefix'] = f'deterministic_climate_F{F_test}_run{i:02d}_' 
     test_params['n_ens'] = 1
-    test(params, test_params, param_func)
+    online_test(params, test_params, param_func)
     
     test_params['n_ens'] = 50
     # Run Epistemic with fixed parameters - will sample guide parameters before each ensemble member
@@ -75,7 +75,7 @@ for i in range(1):
     param_func = parameterisation_AR1.keep_epistemic_fixed
     test_params['runtype'] = 'epistemic'
     test_params['save_prefix'] = f'epistemic_fix_climate_F{F_test}_run{i:02d}_' 
-    #test(params, test_params, param_func, param_sample=param_sample)
+    online_test(params, test_params, param_func, param_sample=param_sample)
 
     # Run Both with fixed parameters - epistemic fixed and aleatoric sampled using AR1
     parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi)
@@ -83,27 +83,27 @@ for i in range(1):
     param_func = parameterisation_AR1.keep_epistemic_fixed
     test_params['runtype'] = 'both'
     test_params['save_prefix'] = f'both_fix_AR1_climate_F{F_test}_run{i:02d}_' 
-    #test(params, test_params, param_func, param_sample=param_sample)
+    online_test(params, test_params, param_func, param_sample=param_sample)
 
     # Run Aleatoric with AR1 - need to set up ParameterisationAR1 class with sigma from guide
     parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi)
     param_func = parameterisation_AR1.aleatoric_only
     test_params['runtype'] = 'aleatoric'
     test_params['save_prefix'] = f'aleatoric_AR1_climate_F{F_test}_run{i:02d}_' 
-    #test(params, test_params, param_func)
+    online_test(params, test_params, param_func)
 
     parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi, 
         aleatoric=False, epistemic=True, N=2)
     param_func = parameterisation_AR1.AR1_param
     test_params['runtype'] = 'epistemic'
     test_params['save_prefix'] = f'epistemic_AR1_climate_F{F_test}_run{i:02d}_' 
-    #test(params, test_params, param_func)
+    online_test(params, test_params, param_func)
 
     parameterisation_AR1 = ParameterisationAR1(pyro_model, guide, sigma = sigma, phi=phi,
         aleatoric=True, epistemic=True, N=2)
     param_func = parameterisation_AR1.AR1_param
     test_params['runtype'] = 'both'
     test_params['save_prefix'] = f'both_AR1_climate_F{F_test}_run{i:02d}_' 
-    #test(params, test_params, param_func)
+    online_test(params, test_params, param_func)
 
 

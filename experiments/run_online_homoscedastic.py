@@ -9,7 +9,7 @@ from pyro.infer import Predictive
 from ml_models.TorchModels import LinearRegression, NN
 from ml_models.BayesianModels import BayesianNN
 
-from scripts.online_test import test
+from scripts.online_run import online_run
 from scripts.Parameterisation import *
 
 # Set up parameters for simulation
@@ -56,47 +56,47 @@ parameterisation = Parameterisation_VI(pyro_model, guide=guide, phi=phi)
 param_func = parameterisation.WN_param_epistemic
 test_params['runtype'] = 'epistemic'
 test_params['save_prefix'] = f'VI_WN_epistemic_' 
-test(params, test_params, param_func)
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
 # Aleatoric
 param_func = parameterisation.WN_param_aleatoric
 test_params['runtype'] = 'aleatoric'
 test_params['save_prefix'] = f'VI_WN_aleatoric_' 
-test(params, test_params, param_func)
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
 # Both
 param_func = parameterisation.WN_param_both
 test_params['runtype'] = 'both'
 test_params['save_prefix'] = f'VI_WN_both_' 
-test(params, test_params, param_func)
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
 # AR1
 # Epistemic
 param_func = parameterisation.AR1_param_epistemic
 test_params['runtype'] = 'epistemic'
 test_params['save_prefix'] = f'VI_AR1_epistemic_' 
-test(params, test_params, param_func)
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
 # Aleatoric
 param_func = parameterisation.AR1_param_aleatoric
 test_params['runtype'] = 'aleatoric'
 test_params['save_prefix'] = f'VI_AR1_aleatoric_' 
-test(params, test_params, param_func)
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
 # Both
 param_func = parameterisation.AR1_param_both
 test_params['runtype'] = 'both'
 test_params['save_prefix'] = f'VI_AR1_both_' 
-test(params, test_params, param_func)
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
 # Epistemic fixed
-#param_func = parameterisation.fixed_param_epistemic
-#test_params['runtype'] = 'epistemic'
-#test_params['save_prefix'] = f'VI_fixed_epistemic_' 
-##test(params, test_params, param_func, param_sample)
+param_func = parameterisation.fixed_param_epistemic
+test_params['runtype'] = 'epistemic'
+test_params['save_prefix'] = f'VI_fixed_epistemic_' 
+online_test(params, test_params, param_func, param_sample)
 
 # Both, with epistemic fixed
-#param_func = parameterisation.fixed_param_both
-#test_params['runtype'] = 'both'
-#test_params['save_prefix'] = f'VI_fixed_both_' 
-##test(params, test_params, param_func, param_sample)
+param_func = parameterisation.fixed_param_both
+test_params['runtype'] = 'both'
+test_params['save_prefix'] = f'VI_fixed_both_' 
+online_test(params, test_params, param_func, param_sample)

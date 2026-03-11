@@ -13,7 +13,7 @@ from ml_models.BayesianModels import BayesianNN, BayesianLinearRegression
 
 from L96.L96_model import L96OneLayerParam
 
-def test(params, test_params, param_func, param_sample=None, reset_param=None):
+def online_test(params, test_params, param_func, param_sample=None, reset_param=None):
     """Function that does online test and saves output
     Args:
     - params
@@ -82,6 +82,7 @@ def test(params, test_params, param_func, param_sample=None, reset_param=None):
 
 
 if __name__ == "__main__":
+    # Example usage with 10 ensembles, 1 initial condition
     params ={
         'F': 20,
         'c': 10,
@@ -96,13 +97,13 @@ if __name__ == "__main__":
                     'runtype': None,
                     'save_model_path':'',
                     'save_prefix':'',
-                    'n_ens': 50,
-                    'N_init': 50,
+                    'n_ens': 10,
+                    'N_init': 1,
                     'save_step': 1,
                     'T':10 ,
                     'F':20                  }
 
-    model_name =  f"BayesianNN_16_N50" 
+    model_name =  f"BayesianNN_16_16_N100_priorNormal(0,1.0)" 
     model_path = f"./data/K{params['K']}_J{params['J']}_h{params['h']}_c{params['c']}_b{params['b']}_F{params['F']}/{model_name}/"
     test_params['save_model_path'] = model_path
 
@@ -111,36 +112,12 @@ if __name__ == "__main__":
     pyro.get_param_store().load(f"{model_path}/pyro_params.pt")
     pyro_model = output_dicts["model"]
     guide = output_dicts["guide"]
+
+    # For parameterisation, sample predictive directly (captures both aleatoric & epistemic)
     predictive = Predictive(pyro_model, guide=guide, num_samples=1, return_sites=("_RETURN", "obs"))
-
-    # Run Epistemic with white noise
-    def param_func(x):
-        out = predictive(x.unsqueeze(-1))["_RETURN"]
-        return out.squeeze()
-    test_params['runtype'] = 'epistemic'
-    test_params['save_prefix'] = 'epistemic_' 
-    test(params, test_params, param_func)
-
-    # Run Aleatoric with white noise
-    sigma = pyro.get_param_store()['sigma']
-        
-    fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())
-    fixed_param_NN.eval()
-    def param_func(x):
-        with torch.no_grad():
-            mean = fixed_param_NN(x.unsqueeze(-1))
-            out = pyro_model.sample_obs(mean)
-        return out.squeeze()
-
-    test_params['runtype'] = 'aleatoric'
-    test_params['save_prefix'] = 'aleatoric_' 
-    test(params, test_params, param_func)
-
-    # Run both types of uncertainty 
     def param_func(x):
         out = predictive(x.unsqueeze(-1))["obs"]
         return out.squeeze()
-
     test_params['runtype'] = 'both'
-    test_params['save_prefix'] = 'both_' 
-    test(params, test_params, param_func)
+    test_params['save_prefix'] = 'short_online_run_' 
+    online_test(params, test_params, param_func)

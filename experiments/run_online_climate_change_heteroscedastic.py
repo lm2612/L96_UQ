@@ -9,8 +9,8 @@ from pyro.infer import Predictive
 from ml_models.TorchModels import LinearRegression, NN
 from ml_models.BayesianModels import BayesianNN, BayesianNN_Heteroscedastic, BayesianLinearRegression
 
-from scripts.online_test import test
-from scripts.AR_parameterisation import ParameterisationAR1_Heteroscedastic
+from scripts.online_test import online_test
+from scripts.Parameterisation import Parameterisation_VI_Heteroscedastic
 from utils.concat_files import concat_files
 
 # Set up parameters for simulation
@@ -39,7 +39,7 @@ for F_test in F_tests:
                     'F':F_test                  }
 
     # Model name
-    model_name =  f"BayesianNN_Heteroscedastic_16_16_N100" 
+    model_name =  f"BayesianNN_Heteroscedastic_16_16_N100_priorNormal(0,1.0)" 
     model_path = f"./data/K{params['K']}_J{params['J']}_h{params['h']}_c{params['c']}_b{params['b']}_F{params['F']}/{model_name}/"
     test_params['save_model_path'] = model_path
 
@@ -51,71 +51,59 @@ for F_test in F_tests:
 
     # Lag-1 Autocorrelation of long timeseries is 0.984865 
     phi = 0.984865 
-    parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi)
+
+    # Set up Parameterisation for Heteroscedastic BNN learned via Variational Inference (VI)
+    parameterisation = Parameterisation_VI_Heteroscedastic(pyro_model, guide=guide, phi=phi)
 
     for i in range(0, 10):
         test_params['fname'] = f'run{i:02d}_X_dtf.npy'
 
         # Run deterministic
         # Deterministic - no uncertainty
-        fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())
-        def param_func(x):
-            with torch.no_grad():
-                mean_sigma = fixed_param_NN(x.unsqueeze(-1))
-            mean, sigma = mean_sigma.chunk(2, dim=-1)
-            return mean.squeeze()
+        param_func = parameterisation.deterministic
         test_params['runtype'] = 'deterministic'
         test_params['save_prefix'] = f'deterministic_climate_F{F_test}_run{i:02d}_' 
         test_params['n_ens'] = 1
         test(params, test_params, param_func)
         
+        # Stochastic
         test_params['n_ens'] = 50
 
         # Run Aleatoric with AR1 
-        parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi)
-        param_func = parameterisation_AR1.aleatoric_only
+        param_func = parameterisation.AR1_param_aleatoric
         test_params['runtype'] = 'aleatoric'
         test_params['save_prefix'] = f'aleatoric_AR1_climate_F{F_test}_run{i:02d}_' 
-        test(params, test_params, param_func)
+        online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
-
+    
         # Run Epistemic with fixed parameters - will sample guide parameters before each ensemble member
-        parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, include_sigma = False, phi=0.)
-
         def param_sample(n):
-            """ Set up parameterisation for ensemble member n """
-            # Open file
-            fixed_nn_model = torch.load(f"{model_path}/fixed_param_model_{n}.pt", weights_only=False)
-            # Update in parameterisation_AR1
-            parameterisation_AR1.fixed_param_NN = fixed_nn_model
-        param_func = parameterisation_AR1.keep_epistemic_fixed
+            # Set up parameterisation fixed parameters
+            np.random.seed(n)
+            torch.manual_seed(n)
+            parameterisation.fixed_param_NN = parameterisation.pyro_model.get_fixed_param_NN(
+                parameterisation.param_sample())
 
+        param_func = parameterisation.fixed_param_epistemic
         test_params['runtype'] = 'epistemic'
-        test_params['save_prefix'] = f'epistemic_fix_climate_F{F_test}_run{i:02d}_' 
-        test(params, test_params, param_func, param_sample=param_sample)
+        test_params['save_prefix'] = f'fixed_epistemic_climate_F{F_test}_run{i:02d}_' 
+        online_test(params, test_params, param_func, 
+            param_sample=param_sample, reset_param=parameterisation.reset_param)
 
         # Run Both with fixed parameters - epistemic fixed and aleatoric sampled using AR1
-        parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, include_sigma=True, phi=phi)
-        def param_sample(n):
-            """ Set up parameterisation for ensemble member n """
-            # Open file
-            fixed_nn_model = torch.load(f"{model_path}/fixed_param_model_{n}.pt", weights_only=False)
-            # Update in parameterisation_AR1
-            parameterisation_AR1.fixed_param_NN = fixed_nn_model
-        param_func = parameterisation_AR1.keep_epistemic_fixed
-        
+        param_func = parameterisation.fixed_param_both    
         test_params['runtype'] = 'both'
-        test_params['save_prefix'] = f'both_fix_AR1_climate_F{F_test}_run{i:02d}_' 
-        test(params, test_params, param_func, param_sample=param_sample)
+        test_params['save_prefix'] = f'fixed_both_AR1_climate_F{F_test}_run{i:02d}_' 
+        online_test(params, test_params, param_func, 
+            param_sample=param_sample, reset_param=parameterisation.reset_param)
 
-        parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi, aleatoric=False, epistemic=True, N=2)
-        param_func = parameterisation_AR1.AR1_param
+        # Regular epistemic/both (AR1)
+        param_func = parameterisation.AR1_param_epistemic
         test_params['runtype'] = 'epistemic'
         test_params['save_prefix'] = f'epistemic_AR1_climate_F{F_test}_run{i:02d}_' 
-        test(params, test_params, param_func)
+        online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
-        parameterisation_AR1 = ParameterisationAR1_Heteroscedastic(pyro_model, guide, phi=phi, aleatoric=True, epistemic=True, N=2)
-        param_func = parameterisation_AR1.AR1_param
+        param_func = parameterisation.AR1_param_both
         test_params['runtype'] = 'both'
         test_params['save_prefix'] = f'both_AR1_climate_F{F_test}_run{i:02d}_' 
-        test(params, test_params, param_func)
+        online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)

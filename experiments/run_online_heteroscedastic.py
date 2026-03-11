@@ -7,10 +7,10 @@ import pyro
 from pyro.infer import Predictive
 
 from ml_models.TorchModels import LinearRegression, NN
-from ml_models.BayesianModels import BayesianNN_Heteroscedastic, BayesianLinearRegression
+from ml_models.BayesianModels import BayesianNN_Heteroscedastic
 
-from scripts.online_test import test
-
+from scripts.online_test import online_test
+from scripts.Parameterisation import *
 
 # Set up parameters for simulation
 params ={
@@ -23,6 +23,7 @@ params ={
     'dt': 0.001,
     'dt_f': 0.005,
 }
+
 test_params = { 'fname':'X_dtf.npy',
                 'runtype': None,
                 'save_model_path':'',
@@ -34,7 +35,7 @@ test_params = { 'fname':'X_dtf.npy',
                 'F':20                  }
 
 # Model name
-model_name =  f"BayesianNN_Heteroscedastic_16_16_N100" 
+model_name =  f"BayesianNN_Heteroscedastic_16_16_N100_priorNormal(0,1.0)" 
 model_path = f"./data/K{params['K']}_J{params['J']}_h{params['h']}_c{params['c']}_b{params['b']}_F{params['F']}/{model_name}/"
 test_params['save_model_path'] = model_path
 
@@ -44,42 +45,61 @@ pyro.get_param_store().load(f"{model_path}/pyro_params.pt")
 pyro_model = output_dicts["model"]
 guide = output_dicts["guide"]
 
-# Run Epistemic with white noise
-def param_func(x):
-    fixed_param_NN = pyro_model.get_fixed_param_NN(guide())
-    fixed_param_NN.eval()
-    with torch.no_grad():
-        mean_sigma = fixed_param_NN(x.unsqueeze(-1))
-    mean, sigma = mean_sigma.chunk(2, dim=-1)
-    return mean.squeeze()
+# Lag-1 Autocorrelation of long timeseries is 0.984865 
+phi = 0.984865 
 
+np.random.seed(123)
+torch.manual_seed(123)
+
+# Set up Parameterisation for Heteroscedastic BNN learned via Variational Inference (VI)
+parameterisation = Parameterisation_VI_Heteroscedastic(pyro_model, guide=guide, phi=phi)
+
+# White noise
+# Epistemic
+param_func = parameterisation.WN_param_epistemic
 test_params['runtype'] = 'epistemic'
-test_params['save_prefix'] = 'epistemic_' 
-test(params, test_params, param_func)
+test_params['save_prefix'] = f'VI_WN_epistemic_' 
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
-# Run Aleatoric with white noise
-fixed_param_NN = pyro_model.get_fixed_param_NN(guide.median())
-fixed_param_NN.eval()
-def param_func(x):
-    with torch.no_grad():
-        mean_sigma = fixed_param_NN(x.unsqueeze(-1))
-        out = pyro_model.sample_obs(mean_sigma)
-    return out.squeeze()
-
+# Aleatoric
+param_func = parameterisation.WN_param_aleatoric
 test_params['runtype'] = 'aleatoric'
-test_params['save_prefix'] = 'aleatoric_' 
-test(params, test_params, param_func)
+test_params['save_prefix'] = f'VI_WN_aleatoric_' 
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
-# Run both types of uncertainty 
-def param_func(x):
-    fixed_param_NN = pyro_model.get_fixed_param_NN(guide())
-    fixed_param_NN.eval()
-    with torch.no_grad():
-        mean_sigma = fixed_param_NN(x.unsqueeze(-1))
-        out = pyro_model.sample_obs(mean_sigma)
-    return out.squeeze()
-
+# Both
+param_func = parameterisation.WN_param_both
 test_params['runtype'] = 'both'
-test_params['save_prefix'] = 'both_' 
-test(params, test_params, param_func)
+test_params['save_prefix'] = f'VI_WN_both_' 
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
 
+# AR1
+# Epistemic
+param_func = parameterisation.AR1_param_epistemic
+test_params['runtype'] = 'epistemic'
+test_params['save_prefix'] = f'VI_AR1_epistemic_' 
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
+
+# Aleatoric
+param_func = parameterisation.AR1_param_aleatoric
+test_params['runtype'] = 'aleatoric'
+test_params['save_prefix'] = f'VI_AR1_aleatoric_' 
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
+
+# Both
+param_func = parameterisation.AR1_param_both
+test_params['runtype'] = 'both'
+test_params['save_prefix'] = f'VI_AR1_both_' 
+online_test(params, test_params, param_func, reset_param=parameterisation.reset_param)
+
+# Epistemic fixed
+param_func = parameterisation.fixed_param_epistemic
+test_params['runtype'] = 'epistemic'
+test_params['save_prefix'] = f'VI_fixed_epistemic_' 
+online_test(params, test_params, param_func, param_sample, reset_param=parameterisation.reset_param)
+
+# Both, with epistemic fixed
+param_func = parameterisation.fixed_param_both
+test_params['runtype'] = 'both'
+test_params['save_prefix'] = f'VI_fixed_both_' 
+online_test(params, test_params, param_func, param_sample, reset_param=parameterisation.reset_param)

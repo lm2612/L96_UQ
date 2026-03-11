@@ -64,10 +64,17 @@ def compare_uncertainties(params, model_paths, model_labels, save_prefix="", n_b
                                     return_sites=("obs", "_RETURN"))
             
         else:
+            model = output_dicts["model"]
             predictive = output_dicts["predictive"]
 
         # Evaluate on validation dataset
         sorted_inds = torch.sort(X_torch.flatten())[1]
+
+        # Print bins - sanity check
+        n_samples = len(sorted_inds)
+        n_per_bin = n_samples // n_bins
+        X_bins = X_torch.flatten()[sorted_inds].reshape((n_bins, n_per_bin))
+        print(f"Plotting with X bins: ", X_bins)
         
         samples = predictive(X_torch)
 
@@ -87,7 +94,7 @@ def compare_uncertainties(params, model_paths, model_labels, save_prefix="", n_b
         total_var = aleatoric_var + epistemic_var
         
         # Breakdown by bins
-        # Put into 4x bins to show edges of dataset (default is n=1 so the mean is taken across full dataset)
+        # Put into N bins to show edges of dataset (default is n=1 so the mean is taken across full dataset)
         n_samples = total_var.shape[0]
         n_per_bin = n_samples // n_bins
         total_var = total_var[sorted_inds].reshape((n_bins, n_per_bin)).mean(dim=1)
@@ -109,11 +116,10 @@ def compare_uncertainties(params, model_paths, model_labels, save_prefix="", n_b
                     label="Epistemic" if (n==0 and i==0) else None)
     
     ax.axis(xmin=-1, xmax=n+1)
-    ax.legend(loc="upper right")
+    ax.legend(loc="upper left")
     ax.set_ylabel(f"Variance across dataset")
     plt.xticks(ticks=range(len(model_paths)), labels=model_labels, rotation=45 )
     plt.tight_layout()
     plt.savefig(f"{plot_path}{save_prefix}variance_comparison_{n_bins}.png")
     print(f"Saved as {plot_path}{save_prefix}variance_comparison_{n_bins}.png")
     plt.close()
-

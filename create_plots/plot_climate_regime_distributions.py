@@ -19,9 +19,9 @@ params ={
 
 
 # Set up model and types of simulations to plot
-model_name = f"BayesianNN_Heteroscedastic_16_16_N100"
+model_name = f"BayesianNN_Heteroscedastic_16_16_N100_priorNormal(0,1.0)"
 
-run_types = ["aleatoric_AR1",  "epistemic_fix", "both_fix_AR1"] 
+run_types = ["aleatoric_AR1",  "fixed_epistemic", "fixed_both_AR1"] 
 label_names = [ "Aleatoric (AR1)",  "Epistemic (PPE)", "Both"]
 
 Fs = [20, 16, 24]

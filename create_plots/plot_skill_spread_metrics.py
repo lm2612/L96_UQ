@@ -18,18 +18,57 @@ params ={
 }
 
 # Set up model and types of simulations to plot
-model_name = f"BayesianNN_Heteroscedastic_16_16_N100"
-run_types = ["aleatoric", "epistemic", "both"] 
-label_names = ["Aleatoric (indep.)", "Epistemic (indep.)", "Both (indep.)"]
-save_prefix = "Indep_"
+model_name = f"BayesianNN_Heteroscedastic_16_16_N100_priorNormal(0,1.0)"
+
+# First, white noise / independent noise simulations
+training_method = "VI" # VI or mcmc_{kernel_name}
+noise_type = "WN"
+
+run_types = [f"{training_method}_{noise_type}_epistemic", 
+    f"{training_method}_{noise_type}_aleatoric", 
+    f"{training_method}_{noise_type}_both"]
+label_names = ["Epistemic (indep.)", 
+"Aleatoric (indep)", 
+"Both (indep)"]
+save_prefix = f"{training_method}_{noise_type}_"
+    
 
 plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
-    ylim=2., samples_per_bin=100)
-
-run_types = ["aleatoric_AR1", "new_epistemic_AR1", "new_both_AR1"] 
-label_names = ["Aleatoric (AR1)", "Epistemic (AR1)", "Both (AR1)"]
-save_prefix = "AR1_"
+    ylim=2, samples_per_bin=100)
+noise_type = "AR1"
+run_types = [f"{training_method}_{noise_type}_epistemic", 
+    f"{training_method}_{noise_type}_aleatoric", 
+    f"{training_method}_{noise_type}_both"]
+label_names = ["Epistemic (AR1)", "Aleatoric (AR1)", "Both (AR1)"]
+save_prefix = f"{training_method}_{noise_type}_"
 
 plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
-    ylim=2., samples_per_bin=100)
+    ylim=2, samples_per_bin=100)
 
+
+# Set up model and types of simulations to plot
+model_name = f"BayesianNN_16_16_N100_priorNormal(0,1.0)"
+training_method = "VI" # VI or mcmc_{kernel_name}
+noise_type = "WN"
+
+run_types = [f"{training_method}_{noise_type}_epistemic", 
+    f"{training_method}_{noise_type}_aleatoric", 
+    f"{training_method}_{noise_type}_both"]
+label_names = ["Epistemic (indep.)", 
+                "Aleatoric (indep)", 
+                "Both (indep)"]
+save_prefix = f"{training_method}_{noise_type}_"
+    
+
+plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
+    ylim=2, samples_per_bin=100)
+
+noise_type = "AR1"
+run_types = [f"{training_method}_{noise_type}_epistemic", 
+    f"{training_method}_{noise_type}_aleatoric", 
+    f"{training_method}_{noise_type}_both"]
+label_names = ["Epistemic (AR1)", "Aleatoric (AR1)", "Both (AR1)"]
+save_prefix = f"{training_method}_{noise_type}_"
+
+plot_spread_v_skill(params, model_name, run_types, label_names, save_prefix=save_prefix, 
+    ylim=2, samples_per_bin=100)

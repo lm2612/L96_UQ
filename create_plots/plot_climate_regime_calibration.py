@@ -19,7 +19,7 @@ params ={
 
 
 # Set up model and types of simulations to plot
-model_name = f"BayesianNN_Heteroscedastic_16_16_N100"
+model_name = f"BayesianNN_Heteroscedastic_16_16_N100_priorNormal(0,1.0)"
 
 # This only works for either epistemic or both (ppe version)
 fnames_true_calibration = [f"climate_F20_run{i:02d}_X_dtf" for i in range(10)]
@@ -27,9 +27,9 @@ fnames_true_calibration = [f"climate_F20_run{i:02d}_X_dtf" for i in range(10)]
 Fs = [20, 16, 24]
 Ts = range(6000, 20001, 500)
 # For both:
-run_types = ["both_fix_AR1"]
+run_types = ["fixed_both_AR1"]
 label_names = ["Both"]
-run_types_other = ["aleatoric_AR1", "epistemic_fix"]
+run_types_other = ["aleatoric_AR1", "fixed_epistemic"]
 label_names_other = ["Aleatoric", "Epistemic"]
 
 Fs=[20, 16, 24]
@@ -47,7 +47,7 @@ for F in Fs:
 # For epistemic
 run_types = ["epistemic_fix"] 
 label_names = [ "Epistemic"]
-run_types_other = ["aleatoric_AR1", "both_fix"]
+run_types_other = ["aleatoric_AR1", "fixed_both_AR1"]
 label_names_other = ["Aleatoric", "Both"]
 
 

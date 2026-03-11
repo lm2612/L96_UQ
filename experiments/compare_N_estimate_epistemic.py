@@ -28,13 +28,12 @@ params ={
 
 # Set up model and types of simulations to plot
 N_train = 100
-model_name = f"BayesianNN_16_16_N{N_train}"
-Ns = [1, 2, 4, 5, 10, 20, 50]
-run_types = [f"newN{N}_epistemic_AR1" for N in Ns] 
+model_name = f"BayesianNN_16_16_N{N_train}_priorNormal(0,1.0)"
+Ns = [2, 4, 5, 10, 20, 50]
+run_types = [f"epistemic_AR1_N{N}" for N in Ns] 
 label_names = [f"N={N}" for N in Ns] 
 linestyles = ["dotted", "dashed", "dashdot", "solid"]
 colors = ["#2596be", "#2187ab", "#1e7898", "#1a6985", "#165a72", "#134b5f", "#0f3c4c"]
-save_prefix = "newN"
-
+save_prefix = "N"
 
 plot_error_trajectories(params, model_name, run_types, label_names, save_prefix=save_prefix, colors=colors)

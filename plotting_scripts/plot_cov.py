@@ -41,9 +41,10 @@ def plot_cov(params, training_params, model_name, num_samples=1000):
         sample_dicts = [guide() for _ in range(num_samples)]  # list of OrderedDicts
 
         # Stack each parameter: shape becomes (num_samples, *param_shape)
+        keys = ["layers.0.bias", "layers.0.weight", "layers.1.bias" ,"layers.1.weight",
+            "layers.2.bias", "layers.2.weight"] # same order as MCMC keys. otherwise use sample_dicts[0].keys()
         posterior_samples = OrderedDict( (k, torch.stack([sd[k].detach() for sd in sample_dicts], dim=0))
-            for k in ["layers.0.bias", "layers.0.weight", "layers.1.bias" ,"layers.1.weight",
-            "layers.2.bias", "layers.2.weight", ]
+            for k in keys
         )
     else:
         # MCMC used - more flexible for capturing full distribution
@@ -63,25 +64,20 @@ def plot_cov(params, training_params, model_name, num_samples=1000):
 
     # Compute covariance matrix
     cov = params_all.T.cov().T
-    # Rescale so we have ~1 along diag for consistent colors
-    #cov = cov/np.mean(np.diag(cov))
     
-    # Also compute means of distribution to plot
-    mean_params = params_all.mean(dim=0, keepdims=False)
-    block_means = torch.stack((mean_params, mean_params), dim=0)
-
+    # Colorbar: max of cov is always >1, scale colorbar by min
+    vmin = cov.min()
+    
     # Plot
     plt.clf()
     fig, ax = plt.subplots(1)
     x = np.arange(0, total_params)
-    plt.pcolormesh(x, x, cov, cmap="RdBu_r", vmax=0.1, vmin=-0.1)
+    plt.pcolormesh(x, x, cov, cmap="RdBu_r", vmax=np.abs(vmin), vmin=vmin)
     param_divider = 0
     text_pos = 0
     for i in range(len(param_size_list)):
         text_pos = param_divider + param_size_list[i]//2
-
         param_divider += param_size_list[i]
-        print(param_names[i], param_size_list[i], param_divider, text_pos)
 
         plt.axhline(param_divider, color='k', linestyle="dashed", alpha=0.2)
         plt.axvline(param_divider, color='k', linestyle="dashed", alpha=0.2)
@@ -91,12 +87,10 @@ def plot_cov(params, training_params, model_name, num_samples=1000):
         else :
             va = 'top'
         
-        #plt.text(x[-1]+ 5, text_pos, param_names[i], va='center', ha='right') #, rotation=-45)
         plt.text(-1., text_pos, param_names[i], va='center', ha='right')
         plt.text(text_pos, -1., param_names[i], va='top', ha='right', rotation=45)
     
     # Add mean values along vertical axis
-    #plt.pcolormesh(torch.tensor([-25, -20]), x, block_means.T, cmap="RdBu_r", vmax=5, vmin=-5)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['bottom'].set_visible(False)
@@ -104,8 +98,6 @@ def plot_cov(params, training_params, model_name, num_samples=1000):
     ax.get_xaxis().set_ticks([])
     ax.get_yaxis().set_ticks([])
 
-
-    #plt.axis(xmin=-30, xmax=total_params+3, ymin = -5, ymax = total_params+5)
     plt.axis(xmin=-5, xmax=total_params+2, ymin = -5, ymax = total_params+2)
     plt.tight_layout()
     plt.savefig(f"{model_path}/{training_method}{kernel_name}_cov.png")

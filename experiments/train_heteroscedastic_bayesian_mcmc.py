@@ -1,0 +1,63 @@
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+
+import torch
+
+import pyro
+import pyro.distributions as dist
+from pyro.nn import PyroModule, PyroSample
+
+from pyro.infer.autoguide import AutoDiagonalNormal, AutoMultivariateNormal, AutoLowRankMultivariateNormal
+
+from ml_models.BayesianModels import BayesianNN_Heteroscedastic
+from scripts.train_bayesian_mcmc import bayesian_train_mcmc
+from plotting_scripts.plot_inputs_outputs import plot_inputs_outputs
+
+params ={
+    'F': 20,
+    'c': 10,
+    'b': 10,
+    'h': 1,
+    'J': 32,
+    'K': 8,
+    'dt': 0.001,
+    'dt_f': 0.005,
+    }
+    
+seed = 123
+np.random.seed(seed)
+torch.manual_seed(seed)
+
+## RW
+kernel_name = 'RW'    # Can try RW, NUTS, HMC (If using NUTS/HMC, turn down number of steps)
+
+training_params = {
+    'N_train': 100, 
+    'batch_size': 128,
+    'num_iterations' : 40000 ,
+    'num_samples' : 20000 ,
+    'warmup_steps' : 1000000 ,
+    'num_chains':1,
+    'training_method': 'mcmc',
+    'kernel_name':kernel_name,
+    'save_prefix':'',
+}
+N_train = training_params['N_train']
+
+seed = 1234
+np.random.seed(seed)
+torch.manual_seed(seed)
+
+# Choose prior distribution
+dist_name = "Normal"
+scale = 1.0
+model_name =  f"BayesianNN_Heteroscedastic_16_16_N{N_train}_prior{dist_name}(0,{scale})"  
+
+# Set up model 
+model = BayesianNN_Heteroscedastic(1, 1, [16, 16], 
+    dist_name=dist_name, weight_scale=scale, bias_scale=scale) 
+
+bayesian_train_mcmc(params, training_params, model_name, model, kernel_name=kernel_name)
+plot_inputs_outputs(params, training_params, model_name)
+

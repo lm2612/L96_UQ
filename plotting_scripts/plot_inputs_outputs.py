@@ -64,7 +64,6 @@ def plot_inputs_outputs(params, training_params, model_name,
         predictive = output_dicts["predictive"]
         posterior_samples = output_dicts["samples"]
         training_method = training_method + "_" + kernel_name
-        #num_samples = training_params["num_samples"]
         print(f"{training_method}, num samples {num_samples}")
         posterior_samples = OrderedDict( (k, v[:num_samples]) for k, v in posterior_samples.items())
 
@@ -247,15 +246,11 @@ def plot_inputs_outputs(params, training_params, model_name,
 
     for j in range(num_samples):
             plt.plot(X_domain, samples_mean[j], color="skyblue", lw=0.5, alpha=0.4,
-            label = r"$U_{i}|X,\theta$" if j==0 else None)
+            label = r"$U_{i}|X,\theta_{i}$" if j==0 else None)
     plt.plot(X_domain, mean_pred, color="darkorchid", lw=2, label=r"$E[U|X,\theta]$")
 
     # Compare to deterministic prediction, assuming mean parameter values 
     plt.plot(X_domain, det_pred[:, 0], color="k", lw=2, label=r"$U|X,\bar{\theta}$")
-
-    # Median only different if using MCMC
-    #plt.plot(X_domain, det_pred_median[:, 0], color="green", lw=1, linestyle="dashed", 
-    #    label="Predicted from median theta")
     plt.legend()
     plt.axis(xmin=Xmin, xmax=Xmax, ymin=Ymin, ymax=Ymax)
 
@@ -286,20 +281,15 @@ def plot_inputs_outputs(params, training_params, model_name,
 
         for j in range(num_samples):
             plt.plot(X_domain, np.sqrt(samples_sigma2[j]), color="skyblue", lw=0.5, alpha=0.4,
-                        label = r"$\sigma (U_{i}|X,\theta$)" if j==0 else None)
+                        label = r"$\sigma{i}|X,\theta_{i}$" if j==0 else None)
 
         plt.plot(X_domain, np.sqrt(aleatoric_var), color="seagreen", lw=2, 
-            label=r"$(E[\sigma^2(U|X,\theta)])^{1/2}$")
+            label=r"$E[\sigma^2|X,\theta]^{1/2}$")
 
         # Compare to deterministic prediction, assuming mean parameter values 
         aleatoric_predicted_sigma = np.abs(torch.exp(det_pred[:, 1])+model.eps)
         plt.plot(X_domain, aleatoric_predicted_sigma, color="k", lw=2, 
-            label=r"$\sigma(U|X,\bar{\theta})$")
-
-        # Median only different if using MCMC
-        #aleatoric_predicted_sigma = np.abs(torch.exp(det_pred_median[:, 1])+model.eps)
-        #plt.plot(X_domain, aleatoric_predicted_sigma, color="green", lw=1, linestyle="dashed", 
-        #    label="Predicted from median theta")
+            label=r"$\sigma|X,\bar{\theta}$")
 
         plt.legend()
         plt.axis( xmin=Xmin, xmax=Xmax, ymin=0, ymax=10.)

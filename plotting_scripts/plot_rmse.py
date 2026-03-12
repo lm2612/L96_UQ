@@ -13,7 +13,7 @@ from plotting_scripts.plot_dicts import plotcolor
 from utils.add_time_axis import add_axis_weather
 
 def plot_error_trajectories(params, model_name, run_types, label_names, save_prefix="", 
-    plot_spread=True, include_sum=False, linestyles=None, colors=None, xmax=6):
+    plot_spread=True, include_sum=False, linestyles=None, colors=None, xmax=6, ymax=5):
     """Plots error trajectories """
     K, J, h, F, c, b = params['K'], params['J'], params['h'], params['F'], params['c'], params['b']
     dt, dt_f = params['dt'], params['dt_f']
@@ -74,7 +74,7 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
                 label=label_names[r]+" Spread",
                 linestyle="dashed")
 
-    axs.axis(xmin=0, xmax=xmax, ymin = 0., ymax=5.)
+    axs.axis(xmin=0, xmax=xmax, ymin = 0., ymax=ymax)
     axs.legend(loc="lower right", ncol=2 if len(run_types)>4 else 1)
     axs.set_ylabel(f"RMSE or Spread in $X$")
     axs.set_xlabel("Time")
@@ -107,7 +107,7 @@ def plot_error_trajectories(params, model_name, run_types, label_names, save_pre
                 label="Sum (Epistemic+Aleatoric)",
                 linestyle="dashed")
 
-    axs.axis(xmin=0, xmax=xmax, ymax=5.)
+    axs.axis(xmin=0, xmax=xmax, ymax=ymax)
     axs.legend(loc="upper left" , ncol=2 if len(run_types)>4 else 1)
     axs.set_ylabel("Ensemble Spread")
     axs.set_xlabel("Time")

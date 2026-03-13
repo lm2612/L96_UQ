@@ -13,6 +13,21 @@ compare how epistemic and aleatoric uncertainty evolve over weather and climate 
 
 Aleatoric and epistemic uncertainties over time on weather and climate timescales, estimated through ensembles that sample aleatoric and epistemic uncertainty using Bayesian neural networks for parameterisations in the Lorenz 1996 model. The spread shows the 16th and 84th percentiles. For weather, we show divergence of large-scale variables from the ensemble mean, where aleatoric uncertainty from subgrid v   ariability dominates. For climate, we show the ratio of time spent in one weather regime, where epistemic uncertainty is the dominant source of uncertainty.
 
+### Installation
+Install the codebase using:
+```
+pip install -e .
+```
+
+### Getting Started
+Simple notebooks that show how to use the code can be found in `notebooks/`:
+
+- **`1_run_L96_model.ipynb`**: set up and run the two-layer Lorenz–96 model and generate data for training and evaluation.
+- **`2_train_deterministic_NN.ipynb`**: train a deterministic neural network parameterisation for the unresolved (small-scale) tendencies.
+- **`3_run_NN_L96_online.ipynb`**: couple the deterministic neural network to the Lorenz–96 model and run online forecasts.
+- **`4_train_bayesian_NN.ipynb`**: train a Bayesian neural network parameterisation and separate epistemic and aleatoric uncertainties.
+- **`5_run_BNN_L96_online_ensembles.ipynb`**: run online ensemble simulations with the Bayesian neural network to sample epistemic and aleatoric uncertainty over time.
+
 ### Project Directory Overview
 
 **`L96/`**  
@@ -20,6 +35,9 @@ Core implementation of the Lorenz–96 dynamical system, including model equatio
 
 **`ml_models/`**  
 PyTorch and Pyro implementations of neural network and Bayesian neural network parameterisations.
+
+**`notebooks/`**
+Simple walk through of the code through five notebooks - this is the best place to start with the repository.
 
 **`scripts/`**  
 Reusable functions for generating training data, training ML models, and running the L96 system coupled to parameterisations under different sampling methods.

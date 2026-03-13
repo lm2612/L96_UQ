@@ -30,32 +30,15 @@ Simple notebooks that show how to use the code can be found in `notebooks/`:
 
 ### Project Directory Overview
 
-**`L96/`**  
-Core implementation of the Lorenz–96 dynamical system, including model equations and numerical integration methods.
-
-**`ml_models/`**  
-PyTorch and Pyro implementations of neural network and Bayesian neural network parameterisations.
-
-**`notebooks/`**
-Simple walk through of the code through five notebooks - this is the best place to start with the repository.
-
-**`scripts/`**  
-Reusable functions for generating training data, training ML models, and running the L96 system coupled to parameterisations under different sampling methods.
-
-**`experiments/`**  
-High-level scripts used to execute full experiment pipelines: data generation, ML model training, and coupled model simulations.
-
-**`plotting_scripts/`**  
-Reusable plotting functions for analysis, including error trajectories, spread–skill plots, probability distribution functions, and animations.
-
-**`create_plots/`**  
-High-level scripts that generate the plots and visualisations used in analysis, papers, and presentations.
-
-**`utils/`**  
-General-purpose helper functions for metrics, probability scoring, file operations, data transformations, and plotting support.
-
-**`tests/`**  
-Unit tests validating the Lorenz–96 model components and associated utilities.
+- **`L96/`**: Core implementation of the Lorenz–96 dynamical system, including model equations and numerical integration methods.
+- **`ml_models/`**: PyTorch and Pyro implementations of neural network and Bayesian neural network parameterisations.
+- **`notebooks/`**: Simple walk through of the code through five notebooks - this is the best place to start with the repository.
+- **`scripts/`**: Reusable functions for generating training data, training ML models, and running the L96 system coupled to parameterisations under different sampling methods.
+- **`experiments/`**: High-level scripts used to execute full experiment pipelines: data generation, ML model training, and coupled model simulations.
+- **`plotting_scripts/`**: Reusable plotting functions for analysis, including error trajectories, spread–skill plots, probability distribution functions, and animations.
+- **`create_plots/`**: High-level scripts that generate the plots and visualisations used in analysis, papers, and presentations.
+- **`utils/`**: General-purpose helper functions for metrics, probability scoring, file operations, data transformations, and plotting support.
+- **`tests/`**: Unit tests validating the Lorenz–96 model components and associated utilities.
 
 
 ## Authors
